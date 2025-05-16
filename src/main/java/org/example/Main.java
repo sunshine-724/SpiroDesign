@@ -1,11 +1,20 @@
 package org.example;
 
+import javax.swing.JFrame;
+
+import org.example.model.Model;
+import org.example.controller.Controller;
+import org.example.view.View;
+
 public class Main {
     public static void main(String[] args) {
-        System.out.printf("Hello and welcome!");
-
-        for (int i = 1; i <= 5; i++) {
-            System.out.println("i = " + i);
-        }
+        JFrame frame = new JFrame("Spirograph");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 800);
+        frame.setVisible(true);
+        
+        Model model = new Model();
+        View view = new View(model);
+        Controller controller = new Controller(model, view);
     }
 }
