@@ -75,6 +75,14 @@ public class Model {
         pinionGear.changeRadius(radius);
     }
 
+    public Double getPinionGearRadius() {
+        return pinionGear.getRadius();
+    }
+
+    public Double getSpurGearRadius() {
+        return spurGear.getRadius();
+    }
+
     public void loadData() {
         spiroIO.loadData();
     }

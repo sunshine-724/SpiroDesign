@@ -15,4 +15,8 @@ public class SpiroGear {
     public void changeColor(Color color) {
         this.color = color;
     }
+
+    public Double getRadius() {
+        return radius;
+    }
 }
