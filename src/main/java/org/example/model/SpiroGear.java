@@ -2,6 +2,7 @@ package org.example.model;
 
 import java.awt.Color;
 import java.awt.geom.Point2D;
+import java.util.Vector;
 
 public class SpiroGear {
     Point2D.Double position;
@@ -18,5 +19,13 @@ public class SpiroGear {
 
     public Double getRadius() {
         return radius;
+    }
+
+    public Vector2D.Double getPenPosition(){
+        return pen.getPenPosition();
+    }
+
+    public Color getPenColor(){
+        return pen.getColor();
     }
 }
