@@ -1,144 +1,242 @@
+/*
+ * 実際のボタンの配置やサイズはプロジェクトの要件に合わせて調整が必要
+   レイアウトマネージャーは要件によって適切なものを選択
+   ボタンやテキストフィールドにアクションリスナーを追加する必要（Controller との連携部分
+   Graphic2Dは正しくはGraphics2D
+ */
+
 package org.example.view;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.BasicStroke;
+import java.awt.RenderingHints;
 import java.awt.geom.Point2D;
 import java.util.Map;
-import javax.swing.*;
+import java.util.HashMap;
+import javax.swing.JButton;
+import javax.swing.JColorChooser;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
 import org.example.model.Model;
 
 public class View extends JPanel {
 
-    private Model model; // Modelへの参照
+    private Model model;
 
-    public JPanel menuDisplay; // MenuDisplay を小文字始まりの menuDisplay に変更
+    public JPanel MenuDisplay;
+
     public Map<String, JButton> subButton;
+
     public JTextField speedDisplay;
+
     public Map<String, JButton> penSizeDisplay;
+
     public JColorChooser colorPalletDisplay;
 
-    public View(Model model) { // コンストラクタ
+    private double scale = 1.0; // デフォルトスケール（100%）
+    private static final double MIN_SCALE = 0.5; // 最小スケール（50%）
+    private static final double MAX_SCALE = 2.0; // 最大スケール（200%）
+
+    public View(Model model) {
+        // Initialize the view
         this.model = model;
-        initializeComponents();
-    }
 
-    private void initializeComponents() {
-        // MenuDisplay の初期化
-        menuDisplay = new JPanel();
-        menuDisplay.setLayout(new FlowLayout(FlowLayout.LEFT)); // FlowLayout を使用
+        // Set panel properties
+        this.setLayout(null); // or use appropriate layout manager
+        this.setBackground(Color.WHITE);
 
-        // subButton の初期化
-        subButton = new java.util.HashMap<>(); // 実装クラスを指定
-        // ボタンの作成と menuDisplay への追加 (一旦)
-        JButton buttonA = new JButton("機能A");
-        subButton.put("functionA", buttonA);
-        menuDisplay.add(buttonA);
+        // Initialize UI components
+        this.MenuDisplay = new JPanel();
+        MenuDisplay.setLayout(null); // or use appropriate layout manager
 
-        // speedDisplay の初期化
-        speedDisplay = new JTextField(10);
-        speedDisplay.setEditable(false);
-        menuDisplay.add(new JLabel("速度:"));
-        menuDisplay.add(speedDisplay);
+        // Initialize maps for buttons
+        this.subButton = new HashMap<>();
+        this.penSizeDisplay = new HashMap<>();
 
-        // penSizeDisplay の初期化
-        penSizeDisplay = new java.util.HashMap<>(); // 実装クラスを指定
-        // ペンサイズボタンの作成と menuDisplay への追加 (一旦)
-        JButton sizeSmall = new JButton("細");
-        penSizeDisplay.put("small", sizeSmall);
-        menuDisplay.add(new JLabel("ペンサイズ:"));
-        menuDisplay.add(sizeSmall);
-
-        // colorPalletDisplay の初期化
-        colorPalletDisplay = new JColorChooser();
-        menuDisplay.add(new JLabel("色選択:"));
-        menuDisplay.add(colorPalletDisplay);
-
-        // View 自体のレイアウトを設定し、menuDisplay を追加
-        setLayout(new BorderLayout());
-        add(menuDisplay, BorderLayout.NORTH);
-        // 描画領域は中央に追加?
-
-        // イベントリスナーの設定は Controller
-    }
-
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        Graphics2D g2d = (Graphics2D) g;
-        // Model のデータに基づいて描画処理を行う
-        if (model != null) {
-            Point2D.Double pinionPosition = model.getPinionPosition(); // Model クラスにこのメソッドが必要
-            if (pinionPosition != null) {
-                displayPinion(g2d, pinionPosition);
-            }
-            Point2D.Double mousePosition = model.getMousePosition(); // Model クラスにマウス位置を保持するフィールドとゲッターが必要
-            Color mouseColor = model.getMouseColor(); // Model クラスにマウスの色を保持するフィールドとゲッターが必要
-            if (mousePosition != null && mouseColor != null) {
-                displayMousePointer(g2d, mousePosition, mouseColor);
-            }
-            // 他の描画処理
-            displaySpur(g2d, new Point2D.Double(100, 100)); // 一旦固定位置に描画
-            displayDrawPen(g2d, new Point2D.Double(150, 150), Color.BLACK); // 一旦固定位置と色で描画
+        // Create and add buttons to subButton map
+        String[] buttonNames = { "Pen", "SpurGear", "PinionGear", "Start", "Stop", "Clear" };
+        for (String name : buttonNames) {
+            JButton button = new JButton(name);
+            subButton.put(name, button);
+            MenuDisplay.add(button);
+            // Add button locations and sizes as needed
         }
+
+        // Create and add buttons to penSizeDisplay map
+        String[] penSizes = { "Small", "Medium", "Large" };
+        for (String size : penSizes) {
+            JButton button = new JButton(size);
+            penSizeDisplay.put(size, button);
+            MenuDisplay.add(button);
+            // Add button locations and sizes as needed
+        }
+
+        // Initialize text field for speed display
+        this.speedDisplay = new JTextField("0.0");
+        speedDisplay.setEditable(true);
+        MenuDisplay.add(speedDisplay);
+
+        // Initialize color chooser
+        this.colorPalletDisplay = new JColorChooser();
+
+        // Add MenuDisplay to the main panel
+        this.add(MenuDisplay);
+
+        // Set sizes and positions
+        MenuDisplay.setBounds(10, 10, 200, 600); // Adjust as needed
+
+        // Make the panel visible
+        this.setVisible(true);
     }
 
+    /**
+     * ピニオンギアを描画するメソッド
+     *
+     * @param g        Graphics2Dオブジェクト
+     * @param position ピニオンギアの中心位置
+     */
     public void displayPinion(Graphics2D g, Point2D.Double position) {
-        // ピニオンを描画する処理例
-        int radius = 20;
-        g.setColor(Color.BLUE);
-        g.fillOval((int) position.x - radius, (int) position.y - radius, 2 * radius, 2 * radius);
+        // 元のグラフィックス設定を保存
+        Color originalColor = g.getColor();
+        java.awt.Stroke originalStroke = g.getStroke();
+
+        // ピニオンギアの描画設定
+        g.setColor(Color.BLUE); // 青色に設定
+        g.setStroke(new BasicStroke(2)); // 線の太さを2ピクセルに設定
+
+        // アンチエイリアスを有効にして滑らかな円を描画
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // モデルからピニオンギアの半径を取得
+        double radius = model.getPinionGearRadius();
+
+        // 円の描画（中心座標から半径を引いて左上の座標を計算）
+        g.drawOval(
+                (int) (position.x - radius),
+                (int) (position.y - radius),
+                (int) (radius * 2),
+                (int) (radius * 2));
+
+        // グラフィックス設定を元に戻す
+        g.setColor(originalColor);
+        g.setStroke(originalStroke);
     }
 
     public void displayMousePointer(Graphics2D g, Point2D.Double position, Color color) {
-        // マウスカーソルを描画する処理例
-        int size = 10;
-        g.setColor(color);
-        g.fillRect((int) position.x - size / 2, (int) position.y - size / 2, size, size);
+
     }
 
+    /**
+     * スパーギアを描画するメソッド
+     *
+     * @param g        描画コンテキスト
+     * @param position スパーギアの中心位置
+     */
     public void displaySpur(Graphics2D g, Point2D.Double position) {
-        // スパーを描画する処理例
-        int radius = 30;
-        g.setColor(Color.GREEN);
-        g.drawOval((int) position.x - radius, (int) position.y - radius, 2 * radius, 2 * radius);
+        // 元の設定を保存
+        Color originalColor = g.getColor();
+        java.awt.Stroke originalStroke = g.getStroke();
+
+        // 描画設定
+        g.setColor(Color.RED);
+        g.setStroke(new BasicStroke(2.0f));
+
+        // アンチエイリアス設定
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // モデルからスパーギアの半径を取得
+        double radius = model.getSpurGearRadius();
+
+        // 円の左上座標を計算（中心座標から半径分を引く）
+        double x = position.x - radius;
+        double y = position.y - radius;
+
+        // 円を描画
+        g.drawOval((int) x, (int) y, (int) (radius * 2), (int) (radius * 2));
+
+        // 元の設定に戻す
+        g.setColor(originalColor);
+        g.setStroke(originalStroke);
     }
 
+    /**
+     * ペンポイントを描画するメソッド
+     *
+     * @param g        描画コンテキスト
+     * @param position ペンポイントの位置
+     * @param color    ペンの色（引数として渡されるが、デフォルトは緑色）
+     */
     public void displayDrawPen(Graphics2D g, Point2D.Double position, Color color) {
-        // 描画ペンを描画する処理例
-        g.setColor(color);
-        g.fillOval((int) position.x - 2, (int) position.y - 2, 4, 4);
+        // 元の設定を保存
+        Color originalColor = g.getColor();
+        java.awt.Stroke originalStroke = g.getStroke();
+
+        // 描画設定
+        // 引数colorが指定されていなければ緑色を使用
+        g.setColor(color != null ? color : Color.GREEN);
+        g.setStroke(new BasicStroke(2.0f));
+
+        // アンチエイリアス設定
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // ペンポイントのサイズ
+        int penSize = 2;
+
+        // 点（小さな円）を描画
+        g.fillOval((int) (position.x - penSize / 2), (int) (position.y - penSize / 2), penSize, penSize);
+
+        // 元の設定に戻す
+        g.setColor(originalColor);
+        g.setStroke(originalStroke);
     }
 
-    public void scaling() {
-        //スケーリング処理
-        repaint();
-    }
+    /**
+     * 画面の拡大縮小を行うメソッド
+     *
+     * @param zoomIn trueなら拡大、falseなら縮小
+     */
+    public void scaling(boolean zoomIn) {
+        // 拡大または縮小
+        double scaleChange = zoomIn ? 0.1 : -0.1; // 10%ずつ変更
+        double newScale = scale + scaleChange;
 
-    // Model のデータを更新して View を再描画するメソッド (仮)
-    public void updateView() {
-        if (model != null) {
-            speedDisplay.setText(String.valueOf(model.getSpeed())); // Model クラスに getSpeed() が必要
-            repaint();
+        // スケール制限内かチェック
+        if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
+            scale = newScale;
+            repaint(); // 新しいスケールで再描画
         }
     }
 
-    // ユーザーが選択した色を取得するメソッド (Controller で使用)
-    public Color getSelectedColor() {
-        return colorPalletDisplay.getColor();
+    /**
+     * 現在のスケール係数を取得
+     *
+     * @return 現在のスケール係数
+     */
+    public double getScale() {
+        return scale;
     }
 
-    // ユーザーが選択したペンのサイズを取得するメソッド (Controller で使用)
-    public int getSelectedPenSize() {
-        // penSizeDisplay から選択されているサイズを取得するロジックを実装
-        return 1; // デフォルト値
-    }
-
-    // ボタンなどのアクションリスナーを設定するメソッド (Controller で使用)
-    public void setActionListener(String buttonName, java.awt.event.ActionListener listener) {
-        if (subButton.containsKey(buttonName)) {
-            subButton.get(buttonName).addActionListener(listener);
-        } else if (penSizeDisplay.containsKey(buttonName)) {
-            penSizeDisplay.get(buttonName).addActionListener(listener);
+    /**
+     * スケール係数を直接設定
+     *
+     * @param newScale 設定したいスケール係数（0.5〜2.0）
+     */
+    public void setScale(double newScale) {
+        if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
+            scale = newScale;
+            repaint(); // 新しいスケールで再描画
         }
-        // 他のコンポーネントにも同様に設定
     }
+
+    /**
+     * スケールのパーセント表示を取得（表示用）
+     *
+     * @return スケールのパーセント表示（例: "100%"）
+     */
+    public String getScalePercent() {
+        return (int) (scale * 100) + "%";
+    }
+
 }
