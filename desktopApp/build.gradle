@@ -1,0 +1,25 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm' version '1.9.23'
+    id 'application'
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+
+    // Compose Multiplatform を使うならこれも追加
+    // implementation "org.jetbrains.compose.desktop:desktop-jvm:1.5.10"
+}
+
+application {
+    // Kotlin の top-level 関数はファイル名に Kt が付く
+    mainClass = 'MainKt'
+}
+
+kotlin {
+    jvmToolchain(24)
+}

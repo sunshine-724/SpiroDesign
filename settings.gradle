@@ -1,2 +1,3 @@
-rootProject.name = 'SpiroDesigiin'
-
+rootProject.name = 'SpiroDesign'
+include 'desktopApp'
+include 'shared'
