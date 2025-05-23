@@ -202,6 +202,10 @@ public class View extends JPanel {
         // Graphics2Dにすでにスケールが適用されているため、ここではscaleを乗算しない。
         double radius = model.getPinionGearRadius();
 
+        // 円の左上座標を計算（中心座標から半径分を引く）
+        double x = position.x - radius;
+        double y = position.y - radius;
+
         // 円を描画
         g.drawOval((int) x, (int) y, (int) (radius * 2), (int) (radius * 2));
 
@@ -272,8 +276,6 @@ public class View extends JPanel {
         // アンチエイリアス設定はpaintComponentで設定済みだが、念のため
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-
-
         // 点（小さな円）を描画
         g.fillOval((int) (position.x - penSize / 2), (int) (position.y - penSize / 2), penSize, penSize);
 
@@ -307,7 +309,7 @@ public class View extends JPanel {
                 if (prevPoint != null) {
                     // 前の点と現在の点を線で結ぶ
                     g2d.drawLine((int) prevPoint.x, (int) prevPoint.y,
-                                 (int) currentPoint.x, (int) currentPoint.y);
+                            (int) currentPoint.x, (int) currentPoint.y);
                 }
                 prevPoint = currentPoint;
             }
