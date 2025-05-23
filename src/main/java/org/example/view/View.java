@@ -13,14 +13,20 @@ import java.awt.Graphics2D;
 import java.awt.BasicStroke;
 import java.awt.RenderingHints;
 import java.awt.geom.Point2D;
-import java.awt.geom.AffineTransform; // AffineTransformをインポート
+import java.awt.geom.AffineTransform; //AffineTransformをインポート
 import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
+
 import javax.swing.JButton;
 import javax.swing.JColorChooser;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import org.example.model.Model;
+
+import java.awt.event.MouseAdapter; // MouseAdapterをインポート
+import java.awt.event.MouseEvent; // MouseEventをインポート
+import java.awt.Point; // Pointをインポート
 
 public class View extends JPanel {
 
@@ -39,6 +45,11 @@ public class View extends JPanel {
     private double scale = 1.0; // デフォルトスケール（100%）
     private static final double MIN_SCALE = 0.5; // 最小スケール（50%）
     private static final double MAX_SCALE = 2.0; // 最大スケール（200%）
+
+    // 画面移動用の変数
+    private double translateX = 0;
+    private double translateY = 0;
+    private Point lastMousePoint; // マウスドラッグ時の前回の座標
 
     public View(Model model) {
         // Initialize the view
@@ -107,6 +118,38 @@ public class View extends JPanel {
         }
         colorPalletDisplay.setBounds(10, yOffset, 180, 250); // カラーチューザーは大きめに
 
+        // マウスリスナーを追加
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                // ドラッグ開始時のマウス座標を記録
+                lastMousePoint = e.getPoint();
+            }
+        });
+
+        addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (lastMousePoint != null) {
+                    // 現在のマウス座標と前回の座標の差分を計算
+                    double dx = e.getX() - lastMousePoint.x;
+                    double dy = e.getY() - lastMousePoint.y;
+
+                    // 画面移動量を更新
+                    // マウスの移動は画面ピクセル単位だが、translateX/Yは「元の座標系」での移動量なので、
+                    // 現在のスケールで割る必要がある
+                    translateX += dx / scale;
+                    translateY += dy / scale;
+
+                    // 前回のマウス座標を更新
+                    lastMousePoint = e.getPoint();
+
+                    // 再描画を要求
+                    repaint();
+                }
+            }
+        });
+
         // Make the panel visible
         this.setVisible(true);
     }
@@ -137,6 +180,9 @@ public class View extends JPanel {
         // これにより、スケーリングが適用された後も、他のUIコンポーネント（MenuDisplayなど）
         // が元のスケールで描画されるようにできます。
         AffineTransform originalTransform = g2d.getTransform();
+
+        // 画面移動の適用 (拡大縮小の前に適用)
+        g2d.translate(translateX, translateY);
 
         // スケーリングの適用
         // これ以降の描画はすべてこのスケールで描画されます
@@ -276,14 +322,21 @@ public class View extends JPanel {
         // アンチエイリアス設定はpaintComponentで設定済みだが、念のため
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // 点（小さな円）を描画
-        g.fillOval((int) (position.x - penSize / 2), (int) (position.y - penSize / 2), penSize, penSize);
+        // ペン先のサイズは、描画される点や円の半径として使用
+        g.fillOval((int) (position.x - penSize / 2), (int) (position.y - penSize / 2),
+                (int) penSize, (int) penSize);
 
         // 元の設定に戻す
         g.setColor(originalColor);
         g.setStroke(originalStroke);
     }
 
+    /**
+     * スピログラフの軌跡を描画するメソッド
+     * Modelから軌跡の点を逐次計算して描画します。
+     *
+     * @param g2d Graphics2Dオブジェクト
+     */
     private void displaySpirographPath(Graphics2D g2d) {
         // 元の設定を保存
         Color originalColor = g2d.getColor();
