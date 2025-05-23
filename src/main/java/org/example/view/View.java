@@ -271,7 +271,7 @@ public class View extends JPanel {
         g.setStroke(new BasicStroke(2.0f));
         // ペンポイントのサイズ
 
-        double penSize = model.getPenStrokeWidth(); // ペン先の太さとして利用
+        double penSize = model.getPenSize(); // メソッド名を変更
 
         // アンチエイリアス設定はpaintComponentで設定済みだが、念のため
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -291,7 +291,7 @@ public class View extends JPanel {
 
         // 軌跡の描画設定
         g2d.setColor(model.getPenColor());
-        g2d.setStroke(new BasicStroke((float) model.getPenStrokeWidth()));
+        g2d.setStroke(new BasicStroke((float) model.getPenSize())); // メソッド名を変更
 
         long startTime = model.getSpirographStartTime();
         long currentTime = model.getSpirographCurrentTime();
