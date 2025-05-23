@@ -13,6 +13,7 @@ import java.awt.Graphics2D;
 import java.awt.BasicStroke;
 import java.awt.RenderingHints;
 import java.awt.geom.Point2D;
+import java.awt.geom.AffineTransform; // AffineTransformをインポート
 import java.util.Map;
 import java.util.HashMap;
 import javax.swing.JButton;
@@ -62,6 +63,7 @@ public class View extends JPanel {
             subButton.put(name, button);
             MenuDisplay.add(button);
             // Add button locations and sizes as needed
+            // 例: button.setBounds(x, y, width, height);
         }
 
         // Create and add buttons to penSizeDisplay map
@@ -71,53 +73,137 @@ public class View extends JPanel {
             penSizeDisplay.put(size, button);
             MenuDisplay.add(button);
             // Add button locations and sizes as needed
+            // 例: button.setBounds(x, y, width, height);
         }
 
         // Initialize text field for speed display
         this.speedDisplay = new JTextField("0.0");
         speedDisplay.setEditable(true);
         MenuDisplay.add(speedDisplay);
+        // 例: speedDisplay.setBounds(x, y, width, height);
 
         // Initialize color chooser
         this.colorPalletDisplay = new JColorChooser();
+        MenuDisplay.add(colorPalletDisplay); // メニューパネルに追加
+        // 例: colorPalletDisplay.setBounds(x, y, width, height);
 
         // Add MenuDisplay to the main panel
         this.add(MenuDisplay);
 
-        // Set sizes and positions
+        // Set sizes and positions (仮の値、要調整)
         MenuDisplay.setBounds(10, 10, 200, 600); // Adjust as needed
+        // ボタンやテキストフィールドの位置とサイズもここで設定するか、
+        // MenuDisplayのレイアウトマネージャーを使う
+        int yOffset = 10;
+        for (JButton button : subButton.values()) {
+            button.setBounds(10, yOffset, 180, 30);
+            yOffset += 35;
+        }
+        speedDisplay.setBounds(10, yOffset, 180, 30);
+        yOffset += 35;
+        for (JButton button : penSizeDisplay.values()) {
+            button.setBounds(10, yOffset, 180, 30);
+            yOffset += 35;
+        }
+        colorPalletDisplay.setBounds(10, yOffset, 180, 250); // カラーチューザーは大きめに
 
         // Make the panel visible
         this.setVisible(true);
     }
 
     /**
+     * コンポーネントの描画メソッド
+     *
+     * @param g グラフィックスコンテキスト
+     */
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+
+        // アンチエイリアス設定
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // 背景をクリア
+        g2d.setColor(getBackground());
+        g2d.fillRect(0, 0, getWidth(), getHeight());
+
+        // モデルが設定されていない場合は何もしない
+        if (model == null) {
+            return;
+        }
+
+        // 現在のTransformを保存
+        // これにより、スケーリングが適用された後も、他のUIコンポーネント（MenuDisplayなど）
+        // が元のスケールで描画されるようにできます。
+        AffineTransform originalTransform = g2d.getTransform();
+
+        // スケーリングの適用
+        // これ以降の描画はすべてこのスケールで描画されます
+        g2d.scale(scale, scale);
+
+        // スパーギアの描画
+        Point2D.Double spurPosition = model.getSpurGearPosition();
+        if (spurPosition != null) {
+            // displaySpurメソッド内ではすでにGraphics2Dにスケールが適用されているため、
+            // ここでさらにscaleを乗算する必要はありません。
+            displaySpur(g2d, spurPosition);
+        }
+
+        // ピニオンギアの描画
+        Point2D.Double pinionPosition = model.getPinionGearPosition();
+        if (pinionPosition != null) {
+            // displayPinionメソッド内ではすでにGraphics2Dにスケールが適用されているため、
+            // ここでさらにscaleを乗算する必要はありません。
+            displayPinion(g2d, pinionPosition);
+        }
+
+        // スピログラフの軌跡を描画
+        displaySpirographPath(g2d);
+
+        // ペンの描画 (現在のペン先の位置)
+        Point2D.Double penPosition = model.getPenPosition();
+        Color penColor = model.getPenColor();
+        if (penPosition != null) {
+            // displayDrawPenメソッド内ではすでにGraphics2Dにスケールが適用されているため、
+            // ここでさらにscaleを乗算する必要はありません。
+            displayDrawPen(g2d, penPosition, penColor);
+        }
+
+        // スケールを元に戻す
+        // これを忘れると、MenuDisplayなどのUIコンポーネントも拡大縮小されてしまいます。
+        g2d.setTransform(originalTransform);
+
+        // 現在のスケールを表示 (スケールが元に戻された後に描画)
+        g2d.setColor(Color.BLACK);
+        // getWidth()やgetHeight()はパネルの実際のサイズなので、スケールを元に戻した後に描画
+        g2d.drawString("Scale: " + getScalePercent(), 10, getHeight() - 10);
+    }
+
+    /**
      * ピニオンギアを描画するメソッド
      *
      * @param g        Graphics2Dオブジェクト
-     * @param position ピニオンギアの中心位置
+     * @param position ピニオンギアの中心位置 (Modelからの生座標)
      */
     public void displayPinion(Graphics2D g, Point2D.Double position) {
-        // 元のグラフィックス設定を保存
+        // 元の設定を保存
         Color originalColor = g.getColor();
         java.awt.Stroke originalStroke = g.getStroke();
 
-        // ピニオンギアの描画設定
-        g.setColor(Color.BLUE); // 青色に設定
-        g.setStroke(new BasicStroke(2)); // 線の太さを2ピクセルに設定
+        // 描画設定
+        g.setColor(Color.BLUE);
+        g.setStroke(new BasicStroke(2.0f));
 
-        // アンチエイリアスを有効にして滑らかな円を描画
+        // アンチエイリアス設定はpaintComponentで設定済みだが、念のため
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // モデルからピニオンギアの半径を取得
+        // モデルからピニオンギアの半径を取得。
+        // Graphics2Dにすでにスケールが適用されているため、ここではscaleを乗算しない。
         double radius = model.getPinionGearRadius();
 
-        // 円の描画（中心座標から半径を引いて左上の座標を計算）
-        g.drawOval(
-                (int) (position.x - radius),
-                (int) (position.y - radius),
-                (int) (radius * 2),
-                (int) (radius * 2));
+        // 円を描画
+        g.drawOval((int) x, (int) y, (int) (radius * 2), (int) (radius * 2));
 
         // グラフィックス設定を元に戻す
         g.setColor(originalColor);
@@ -125,14 +211,14 @@ public class View extends JPanel {
     }
 
     public void displayMousePointer(Graphics2D g, Point2D.Double position, Color color) {
-
+        // 未実装
     }
 
     /**
      * スパーギアを描画するメソッド
      *
      * @param g        描画コンテキスト
-     * @param position スパーギアの中心位置
+     * @param position スパーギアの中心位置 (Modelからの生座標)
      */
     public void displaySpur(Graphics2D g, Point2D.Double position) {
         // 元の設定を保存
@@ -143,10 +229,11 @@ public class View extends JPanel {
         g.setColor(Color.RED);
         g.setStroke(new BasicStroke(2.0f));
 
-        // アンチエイリアス設定
+        // アンチエイリアス設定はpaintComponentで設定済みだが、念のため
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // モデルからスパーギアの半径を取得
+        // モデルからスパーギアの半径を取得。
+        // Graphics2Dにすでにスケールが適用されているため、ここではscaleを乗算しない。
         double radius = model.getSpurGearRadius();
 
         // 円の左上座標を計算（中心座標から半径分を引く）
@@ -165,7 +252,7 @@ public class View extends JPanel {
      * ペンポイントを描画するメソッド
      *
      * @param g        描画コンテキスト
-     * @param position ペンポイントの位置
+     * @param position ペンポイントの位置 (Modelからの生座標)
      * @param color    ペンの色（引数として渡されるが、デフォルトは緑色）
      */
     public void displayDrawPen(Graphics2D g, Point2D.Double position, Color color) {
@@ -176,13 +263,16 @@ public class View extends JPanel {
         // 描画設定
         // 引数colorが指定されていなければ緑色を使用
         g.setColor(color != null ? color : Color.GREEN);
+        // ペン先のサイズはModelから取得するか、固定値とする
         g.setStroke(new BasicStroke(2.0f));
+        // ペンポイントのサイズ
 
-        // アンチエイリアス設定
+        double penSize = model.getPenStrokeWidth(); // ペン先の太さとして利用
+
+        // アンチエイリアス設定はpaintComponentで設定済みだが、念のため
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // ペンポイントのサイズ
-        int penSize = 2;
+
 
         // 点（小さな円）を描画
         g.fillOval((int) (position.x - penSize / 2), (int) (position.y - penSize / 2), penSize, penSize);
@@ -190,6 +280,42 @@ public class View extends JPanel {
         // 元の設定に戻す
         g.setColor(originalColor);
         g.setStroke(originalStroke);
+    }
+
+    private void displaySpirographPath(Graphics2D g2d) {
+        // 元の設定を保存
+        Color originalColor = g2d.getColor();
+        java.awt.Stroke originalStroke = g2d.getStroke();
+
+        // 軌跡の描画設定
+        g2d.setColor(model.getPenColor());
+        g2d.setStroke(new BasicStroke((float) model.getPenStrokeWidth()));
+
+        long startTime = model.getSpirographStartTime();
+        long currentTime = model.getSpirographCurrentTime();
+
+        // 描画の解像度 (ミリ秒単位)。この値が小さいほど滑らかだが、計算量が増える
+        // 例: 1ミリ秒ごとに点を計算
+        long step = 1;
+
+        Point2D.Double prevPoint = null;
+
+        // 描画開始から現在までの軌跡を再計算して描画
+        for (long t = 0; t <= currentTime; t += step) {
+            Point2D.Double currentPoint = model.getPenPositionAtTime(t);
+            if (currentPoint != null) {
+                if (prevPoint != null) {
+                    // 前の点と現在の点を線で結ぶ
+                    g2d.drawLine((int) prevPoint.x, (int) prevPoint.y,
+                                 (int) currentPoint.x, (int) currentPoint.y);
+                }
+                prevPoint = currentPoint;
+            }
+        }
+
+        // 元の設定に戻す
+        g2d.setColor(originalColor);
+        g2d.setStroke(originalStroke);
     }
 
     /**
