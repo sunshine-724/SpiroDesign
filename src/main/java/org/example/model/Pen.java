@@ -14,8 +14,10 @@ public class Pen {
         this.position = position;
     }
 
-    public void move(int deltatime) {
-        // 移動処理（具体的な動作は未定）
+    public void move(int time, Point2D.Double pinionPosition, Double pinionRadius, Double theta, Double alpha) {
+        double penX = pinionPosition.x + pinionRadius * Math.cos(theta + alpha);
+        double penY = pinionPosition.y + pinionRadius * Math.sin(theta + alpha);
+        this.position.setLocation(penX, penY);
     }
 
     public void setPosition(Point2D.Double position) {
