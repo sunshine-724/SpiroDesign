@@ -18,7 +18,7 @@ public class PinionGear extends SpiroGear {
         this.alpha = alpha;
     }
 
-    public void move(int time, Double spurRadius, Double spurPosition) {
+    public void move(int time, Double spurRadius, Point2D.Double spurPosition) {
         // 移動処理（具体的な動作は未定）
         theta = speed * time;
         // **ピニオンギアの中心座標を更新**
