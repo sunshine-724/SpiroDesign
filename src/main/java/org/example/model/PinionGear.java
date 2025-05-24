@@ -1,5 +1,7 @@
 package org.example.model;
 
+import java.awt.Color;
+
 import java.awt.geom.Point2D;
 
 public class PinionGear extends SpiroGear {
@@ -16,8 +18,15 @@ public class PinionGear extends SpiroGear {
         this.alpha = alpha;
     }
 
-    public void move(int deltatime) {
+    public void move(int time, Double spurRadius, Double spurPosition) {
         // 移動処理（具体的な動作は未定）
+        theta = speed * time;
+        // **ピニオンギアの中心座標を更新**
+        double centerX = spurPosition.x + (spurRadius - radius) * Math.cos(-theta);
+        double centerY = spurPosition.y + (spurRadius - radius) * Math.sin(-theta);
+
+        // 位置の更新
+        this.position.setLocation(centerX, centerY);
     }
 
     public void setPosition(Point2D.Double position) {
