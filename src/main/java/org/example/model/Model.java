@@ -1,5 +1,6 @@
 package org.example.model;
 
+import java.awt.Color;
 import java.awt.geom.*;
 import javax.swing.Timer;
 
@@ -81,6 +82,38 @@ public class Model {
 
     public Double getPinionGearRadius() {
         return pinionGear.getRadius();
+    }
+
+    public Point2D.Double getPinionGearPosition() {
+        return pinionGear.getPinionPosition();
+    }
+
+    public Point2D.Double getSpurGearPosition() {
+        return spurGear.getSpurPosition();
+    }
+
+    public Point2D.Double getPenPosition() {
+        return pinionGear.getPen().getPosition();
+    }
+
+    public Color getPenColor() {
+        return pinionGear.getPen().getColor();
+    }
+
+    public double getPenSize(){
+        return pinionGear.getPen().getPenSize();
+    }
+
+    public long getSpirographStartTime() {
+        return startTime;
+    }
+
+    public long getSpirographCurrentTime() {
+        return System.currentTimeMillis();
+    }
+
+    public Point2D.Double getPenPositionAtTime(){
+        return pinionGear.getPen().getPosition();
     }
 
     public void loadData() {
