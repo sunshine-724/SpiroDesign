@@ -116,11 +116,11 @@ public class Model {
         return pinionGear.getPen().getPosition();
     }
 
-    public void loadData() {
-        spiroIO.loadData();
+    public void loadData(File file) {
+        spiroIO.loadSpiro(file);
     }
 
-    public void saveData() {
-        spiroIO.saveData();
+    public void saveData(File file) {
+        spiroIO.saveSpiro(file);
     }
 }
