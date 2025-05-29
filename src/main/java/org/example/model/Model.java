@@ -2,6 +2,8 @@ package org.example.model;
 
 import java.awt.Color;
 import java.awt.geom.*;
+import java.io.File;
+
 import javax.swing.Timer;
 
 
