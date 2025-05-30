@@ -8,6 +8,16 @@ public class Pen {
     public Color color;
     private Point2D.Double position;
 
+    // **デフォルト値を設定**
+    private static final double DEFAULT_PEN_SIZE = 5.0;
+    private static final Color DEFAULT_COLOR = Color.BLACK;
+
+    // **デフォルトコンストラクタ**
+    public Pen() {
+        this.penSize = DEFAULT_PEN_SIZE;
+        this.color = DEFAULT_COLOR;
+    }
+
     public Pen(double penSize, Color color, Point2D.Double position) {
         this.penSize = penSize;
         this.color = color;
