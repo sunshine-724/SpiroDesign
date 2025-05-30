@@ -12,14 +12,6 @@ import java.io.IOException;
 
 public class SpiroIO {
 
-    private Model model;
-    private Pen pen;
-
-    public SpiroIO(Model model, Pen pen) {
-        this.model = model;
-        this.pen = pen;
-    }
-
     public void saveSpiro(File file, Model model, Pen pen) {
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) {
             out.writeObject(model);
