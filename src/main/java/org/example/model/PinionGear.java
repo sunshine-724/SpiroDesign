@@ -10,6 +10,16 @@ public class PinionGear extends SpiroGear {
     public double theta;
     public double alpha;
 
+    // **デフォルト値**
+    private static final Point2D.Double DEFAULT_POSITION = new Point2D.Double(470, 400);
+    private static final double DEFAULT_RADIUS = 30.0;
+    private static final Color DEFAULT_COLOR = Color.BLACK;
+
+    // **デフォルトコンストラクタ**
+    public PinionGear() {
+        super(DEFAULT_POSITION, DEFAULT_RADIUS, DEFAULT_COLOR);
+    }
+
     public PinionGear(Pen pen, double speed, double theta, double alpha) {
         super(pen.getPosition(), pen.penSize, pen.color);
         this.pen = pen;
