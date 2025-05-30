@@ -1,3 +1,58 @@
+/*
+ * View.java - スピログラフ描画アプリケーションのViewコンポーネント
+ *
+ * このクラスは、MVC（Model-View-Controller）モデルにおけるViewの役割を担う。
+ *
+ * **変更点履歴:**
+ * - `displayDrawPen`および`displaySpirographPath`（現`displaySpirographLocus`）メソッド内の
+ * 重複する変数宣言とメソッド呼び出しを修正し、`model.getPenSize()`を使用するよう変更した。
+ * - UIコンポーネント（ボタン）に「Save」と「Load」ボタンを追加した。
+ * - スピログラフの軌跡描画メソッド`displaySpirographPath`を`displaySpirographLocus`に名称変更し、
+ * Modelから軌跡の全データ（`List<Point2D.Double> locus`）を取得して描画するようロジックを修正した。
+ * また、Modelがこのデータを提供するよう変更が必要である旨の重要なコメントを追加した。
+ * - ユーザー画面移動（パン）機能を追加した。
+ * - マウスドラッグによる描画領域の移動を可能にするため、`viewOffset`変数を導入した。
+ * - `MouseListener`および`MouseMotionListener`を追加し、マウスイベントを処理する。
+ * - `paintComponent`メソッド内で、描画前に`viewOffset`を`Graphics2D`の変換に適用する。
+ * - コード全体で「Path」という用語を「Locus」に変更した。
+ *
+ * **主要機能:**
+ * - **UIコンポーネントの表示**:
+ * - ギア、ペン、スピログラフの軌跡を描画するキャンバスを提供する。
+ * - ユーザー操作用のボタン（ペン、ギア、開始/停止、クリア、保存/読み込み）、
+ * 速度入力フィールド、カラーピッカーなどのUI要素を配置する。
+ * - 現在のスケール表示を行う。
+ * - 注意: 現在、UIコンポーネントの配置にはnullレイアウトを使用しているが、
+ * 柔軟性と保守性のためにSwingのレイアウトマネージャー（BorderLayout, GridLayout, GridBagLayoutなど）
+ * の利用を強く推奨する。
+ * - **Modelからのデータ取得と描画**:
+ * - Modelクラスから描画に必要なデータ（ギアの位置、半径、ペンの位置、色、サイズ、軌跡データなど）
+ * を取得し、それに基づいて画面にスピログラフを描画する。
+ * - 特にスピログラフの軌跡（Locus）を描画するためには、Modelがペン位置の履歴を
+ * `List<Point2D.Double>` として保持し、`public List<Point2D.Double> getLocus()`
+ * メソッドで提供する必要がある。Modelがこのデータを提供しない場合、軌跡は正しく描画されない。
+ * - **ユーザー入力の受付（間接的）**:
+ * - UIコンポーネント（ボタン、テキストフィールドなど）を公開し、
+ * Controllerがこれらのコンポーネントにアクションリスナーを設定できるようにする。
+ * View自身は直接的なイベント処理を行わず、Controllerに処理を委譲する。
+ * - **画面の拡大縮小機能**:
+ * - スピログラフの描画領域を拡大・縮小する機能を提供する。
+ * - **ユーザー画面移動（パン）機能**:
+ * - マウスドラッグによって描画領域を移動させる機能を提供する。
+ * - **ファイル選択ダイアログの提供**:
+ * - ファイルの保存・読み込み時に使用するJFileChooserダイアログを提供する。
+ *
+ * **MVCモデルにおける役割:**
+ * - **Modelとの関係性**:
+ * - ViewはModelを参照し、Modelのgetterメソッドを通じて描画に必要なデータを読み取る。
+ * - ViewはModelの状態を直接変更することはない。Modelの状態変更はControllerを介して行われる。
+ * - **Controllerとの関係性**:
+ * - ControllerはViewの公開されたUIコンポーネントにイベントリスナーを設定し、
+ * ユーザーの操作（ボタンクリック、テキスト入力など）をViewから受け取る。
+ * - Controllerは受け取ったユーザー操作に基づいてModelの状態を変更し、
+ * 必要に応じてViewの`repaint()`メソッドを呼び出して再描画を指示する。
+ */
+
 package org.example.view;
 
 import java.awt.Color;
@@ -5,6 +60,10 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.BasicStroke;
 import java.awt.RenderingHints;
+import java.awt.Point;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.Point2D;
 import java.awt.geom.AffineTransform;
 import java.util.Map;
@@ -35,59 +94,46 @@ public class View extends JPanel {
     private static final double MIN_SCALE = 0.5; // 最小スケール（50%）
     private static final double MAX_SCALE = 2.0; // 最大スケール（200%）
 
+    // ユーザー画面移動（パン）用の変数
+    private Point2D.Double viewOffset = new Point2D.Double(0, 0); // 描画内容のオフセット（ワールド座標系）
+    private Point lastMousePoint; // マウスドラッグ開始時の画面座標
+    private boolean isDragging = false; // ドラッグ中かどうか
+
     public View(Model model) {
         this.model = model;
 
-        // レイアウトマネージャーは要件によって適切なものを選択（例: BorderLayout, GridLayoutなど）
-        // 現在はnullレイアウトが使用されていますが、これはUIの柔軟性を低下させる。
         this.setLayout(null);
         this.setBackground(Color.WHITE);
 
-        // UIコンポーネントの初期化
         this.MenuDisplay = new JPanel();
-
-        // MenuDisplayも適切なレイアウトマネージャーを使用したい。
         MenuDisplay.setLayout(null);
 
-        // ボタンのマップを初期化
         this.subButton = new HashMap<>();
         this.penSizeDisplay = new HashMap<>();
 
-        // subButtonマップにボタンを作成し追加
         String[] buttonNames = { "Pen", "SpurGear", "PinionGear", "Start", "Stop", "Clear", "Save", "Load" };
         for (String name : buttonNames) {
             JButton button = new JButton(name);
             subButton.put(name, button);
             MenuDisplay.add(button);
-            // アクションリスナーはControllerで追加する必要がある。
-            // 例: button.addActionListener(controllerInstance);
         }
 
-        // penSizeDisplayマップにボタンを作成し追加
         String[] penSizes = { "Small", "Medium", "Large" };
         for (String size : penSizes) {
             JButton button = new JButton(size);
             penSizeDisplay.put(size, button);
             MenuDisplay.add(button);
-            // アクションリスナーはControllerで追加する必要がある。
         }
 
-        // スピード表示用テキストフィールドを初期化
         this.speedDisplay = new JTextField("0.0");
-        speedDisplay.setEditable(true); // Controllerで速度変更を受け付ける場合
+        speedDisplay.setEditable(true);
         MenuDisplay.add(speedDisplay);
-        // アクションリスナーはControllerで追加する必要がある。
-        // 例: speedDisplay.addActionListener(controllerInstance);
 
-        // カラーチューザーを初期化し、メニューパネルに追加
         this.colorPalletDisplay = new JColorChooser();
         MenuDisplay.add(colorPalletDisplay);
-        // カラー選択イベントリスナーはControllerで追加する必要がある。
 
-        // メインパネルにMenuDisplayを追加
         this.add(MenuDisplay);
 
-        // コンポーネントのサイズと位置を設定
         MenuDisplay.setBounds(10, 10, 200, 600);
         int yOffset = 10;
         for (JButton button : subButton.values()) {
@@ -103,6 +149,38 @@ public class View extends JPanel {
         colorPalletDisplay.setBounds(10, yOffset, 180, 250);
 
         this.setVisible(true);
+
+        // マウスイベントリスナーの追加
+        this.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                lastMousePoint = e.getPoint();
+                isDragging = true;
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                isDragging = false;
+            }
+        });
+
+        this.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (isDragging) {
+                    // マウスの移動量を計算（画面ピクセル単位）
+                    double dx = e.getX() - lastMousePoint.getX();
+                    double dy = e.getY() - lastMousePoint.getY();
+
+                    // 画面上の移動量をワールド座標系に変換してオフセットに加算
+                    // スケールが適用されているため、移動量をスケールで割る
+                    viewOffset.setLocation(viewOffset.x + dx / scale, viewOffset.y + dy / scale);
+
+                    lastMousePoint = e.getPoint(); // 現在のマウス位置を更新
+                    repaint(); // 再描画
+                }
+            }
+        });
     }
 
     /**
@@ -115,20 +193,20 @@ public class View extends JPanel {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        // アンチエイリアス設定
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // 背景をクリア
         g2d.setColor(getBackground());
         g2d.fillRect(0, 0, getWidth(), getHeight());
 
-        // モデルが設定されていない場合は何もしない
         if (model == null) {
             return;
         }
 
-        // 現在のTransformを保存
         AffineTransform originalTransform = g2d.getTransform();
+
+        // ユーザー画面移動（パン）の適用
+        // viewOffsetはワールド座標系でのオフセット
+        g2d.translate(viewOffset.x, viewOffset.y);
 
         // スケーリングの適用
         g2d.scale(scale, scale);
@@ -146,7 +224,7 @@ public class View extends JPanel {
         }
 
         // スピログラフの軌跡を描画
-        displaySpirographLocus(g2d); // メソッド名を変更
+        displaySpirographLocus(g2d);
 
         // ペンの描画 (現在のペン先の位置)
         Point2D.Double penPosition = model.getPenPosition();
@@ -155,7 +233,6 @@ public class View extends JPanel {
             displayDrawPen(g2d, penPosition, penColor);
         }
 
-        // スケールを元に戻す
         g2d.setTransform(originalTransform);
 
         // 現在のスケールを表示 (スケールが元に戻された後に描画)
@@ -243,17 +320,18 @@ public class View extends JPanel {
      *
      * @param g2d 描画コンテキスト
      */
-    private void displaySpirographLocus(Graphics2D g2d) { // メソッド名を変更
+    private void displaySpirographLocus(Graphics2D g2d) {
         Color originalColor = g2d.getColor();
         java.awt.Stroke originalStroke = g2d.getStroke();
 
         g2d.setColor(model.getPenColor());
         g2d.setStroke(new BasicStroke((float) model.getPenSize()));
 
-        // Modelから軌跡の全データを取得
-        // Modelクラスに List<Point2D.Double> locus を保持し、
-        // public List<Point2D.Double> getLocus() メソッドを追加して
-        // 軌跡の履歴データを提供するようにModelを変更する必要がありそう。
+        // Modelから軌跡の全データを取得する。
+        // 重要: Penクラスのmoveメソッドで計算されたペン位置をModelが適切に収集し、
+        // その履歴を List<Point2D.Double> として保持し、
+        // public List<Point2D.Double> getLocus() メソッドで提供するよう
+        // Modelクラスを変更する必要がある。
         // Modelが現在の実装のままだと、この描画は正しく機能しない。
         java.util.List<Point2D.Double> locus = model.getLocus();
 
