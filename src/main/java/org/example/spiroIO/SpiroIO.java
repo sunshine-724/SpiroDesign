@@ -1,16 +1,14 @@
 package org.example.spiroIO;
 
+import org.example.model.Model;
+import org.example.model.Pen;
+
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.PortUnreachableException;
-
-import javax.print.attribute.standard.PresentationDirection;
-
 import java.io.IOException;
-
-import java.awt.geom.Point2D;
 
 public class SpiroIO {
 
@@ -35,12 +33,10 @@ public class SpiroIO {
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
             Model modelData = (Model) in.readObject();
             Pen penData = (Pen) in.readObject();
-
-            model.setFromSpiroData(modelData);
-            pen.setFromSpiroData(penData);
+            return new Model(modelData, penData);
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
+            return null;
         }
-        return model;
     }
 }
