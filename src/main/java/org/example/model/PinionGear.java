@@ -150,5 +150,4 @@ public class PinionGear extends SpiroGear {
     public Pen getPen() {
         return pen;
     }
-
 }
