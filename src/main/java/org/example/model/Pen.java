@@ -24,7 +24,7 @@ public class Pen {
         this.position = position;
     }
 
-    public Point2D.Double getPosition() { // ゲッターを追加
+    public Point2D.Double getPosition() {
         return position;
     }
 

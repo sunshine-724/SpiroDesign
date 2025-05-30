@@ -52,4 +52,16 @@ public class PinionGear extends SpiroGear {
     public double getAlpha() {
         return alpha;
     }
+
+    public Point2D.Double getPenPosition() {
+        return pen.getPosition();
+    }
+
+    public Color getPenColor() {
+        return pen.color;
+    }
+
+    public double getPenSize() {
+        return pen.penSize;
+    }
 }
