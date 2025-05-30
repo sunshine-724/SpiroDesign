@@ -35,4 +35,8 @@ public class Pen {
     public void changeSize(double size) {
         this.penSize = size;
     }
+
+    public double getPenSize() {
+        return penSize;
+    }
 }
