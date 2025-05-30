@@ -38,13 +38,14 @@ public class View extends JPanel {
     public View(Model model) {
         this.model = model;
 
-        // 現在はnullレイアウトが使用
+        // レイアウトマネージャーは要件によって適切なものを選択してください（例: BorderLayout, GridLayoutなど）
+        // 現在はnullレイアウトが使用されていますが、これはUIの柔軟性を低下させます。
         this.setLayout(null);
         this.setBackground(Color.WHITE);
 
         // UIコンポーネントの初期化
         this.MenuDisplay = new JPanel();
-        // MenuDisplayも適切なレイアウトマネージャーを使用したい
+        // MenuDisplayも適切なレイアウトマネージャーを使用することを推奨します。
         MenuDisplay.setLayout(null);
 
         // ボタンのマップを初期化
@@ -52,12 +53,13 @@ public class View extends JPanel {
         this.penSizeDisplay = new HashMap<>();
 
         // subButtonマップにボタンを作成し追加
-        String[] buttonNames = { "Pen", "SpurGear", "PinionGear", "Start", "Stop", "Clear" };
+        // 「Save」と「Load」ボタンを追加
+        String[] buttonNames = { "Pen", "SpurGear", "PinionGear", "Start", "Stop", "Clear", "Save", "Load" };
         for (String name : buttonNames) {
             JButton button = new JButton(name);
             subButton.put(name, button);
             MenuDisplay.add(button);
-            // アクションリスナーはControllerで追加する必要がある。
+            // アクションリスナーはControllerで追加する必要があります。
             // 例: button.addActionListener(controllerInstance);
         }
 
@@ -67,25 +69,25 @@ public class View extends JPanel {
             JButton button = new JButton(size);
             penSizeDisplay.put(size, button);
             MenuDisplay.add(button);
-            // アクションリスナーはControllerで追加する必要がありそう。
+            // アクションリスナーはControllerで追加する必要があります。
         }
 
         // スピード表示用テキストフィールドを初期化
         this.speedDisplay = new JTextField("0.0");
         speedDisplay.setEditable(true); // Controllerで速度変更を受け付ける場合
         MenuDisplay.add(speedDisplay);
-        // アクションリスナーはControllerで追加する必要がある。
+        // アクションリスナーはControllerで追加する必要があります。
         // 例: speedDisplay.addActionListener(controllerInstance);
 
         // カラーチューザーを初期化し、メニューパネルに追加
         this.colorPalletDisplay = new JColorChooser();
         MenuDisplay.add(colorPalletDisplay);
-        // カラー選択イベントリスナーはControllerで追加する必要がある。
+        // カラー選択イベントリスナーはControllerで追加する必要があります。
 
         // メインパネルにMenuDisplayを追加
         this.add(MenuDisplay);
 
-        // コンポーネントのサイズと位置を設定（仮の値、レイアウトマネージャーの使用したい）
+        // コンポーネントのサイズと位置を設定（仮の値、レイアウトマネージャーの使用を強く推奨）
         MenuDisplay.setBounds(10, 10, 200, 600);
         int yOffset = 10;
         for (JButton button : subButton.values()) {
@@ -225,12 +227,11 @@ public class View extends JPanel {
         java.awt.Stroke originalStroke = g.getStroke();
 
         g.setColor(color != null ? color : Color.GREEN);
-        double penSize = model.getPenSize(); // Modelからペンサイズを取得
-        g.setStroke(new BasicStroke((float) penSize)); // ペンの太さとして利用
+        double penSize = model.getPenSize();
+        g.setStroke(new BasicStroke((float) penSize));
 
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // 点（小さな円）を描画
         g.fillOval((int) (position.x - penSize / 2), (int) (position.y - penSize / 2), (int) penSize, (int) penSize);
 
         g.setColor(originalColor);
@@ -242,12 +243,11 @@ public class View extends JPanel {
         java.awt.Stroke originalStroke = g2d.getStroke();
 
         g2d.setColor(model.getPenColor());
-        g2d.setStroke(new BasicStroke((float) model.getPenSize())); // Modelからペンサイズを取得
+        g2d.setStroke(new BasicStroke((float) model.getPenSize()));
 
         long startTime = model.getSpirographStartTime();
         long currentTime = model.getSpirographCurrentTime();
 
-        // 描画の解像度 (ミリ秒単位)。この値が小さいほど滑らかだが、計算量が増える
         long step = 1;
 
         Point2D.Double prevPoint = null;
@@ -256,11 +256,8 @@ public class View extends JPanel {
         // スピログラフの軌跡を正しく描画するには、Modelが過去の時点でのペン位置を計算または保持し、
         // その履歴データを提供するように変更する必要があります。
         // 現状のModelのgetPenPositionAtTime()では、このループは常に現在のペン位置を描画しようとします。
-        for (long t = 0; t <= currentTime - startTime; t += step) { // 経過時間でループ
-            // Modelから特定の時点でのペン位置を取得するメソッドが必要です
-            // 現在のModelのgetPenPositionAtTime()は引数を取らず、現在の位置を返すため、
-            // この描画ロジックはModelの変更を必要とします。
-            Point2D.Double currentPoint = model.getPenPositionAtTime(); // ここは本来 model.getPenPositionAtTime(t) となるべき
+        for (long t = 0; t <= currentTime - startTime; t += step) {
+            Point2D.Double currentPoint = model.getPenPositionAtTime();
             if (currentPoint != null) {
                 if (prevPoint != null) {
                     g2d.drawLine((int) prevPoint.x, (int) prevPoint.y,
