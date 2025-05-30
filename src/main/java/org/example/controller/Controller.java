@@ -20,9 +20,10 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     private Point previous = null;
     private Point current = null;
 
-    public void mouseWheelMoved(MouseWheelEvent e) {
-        Integer amount = -e.getWheelRotation();
-        int modifiers = e.getModifiersEx();
+    // マウスのコロコロ
+    public void mouseWheelMoved(MouseWheelEvent e_wheel) {
+        Integer amount = -e_wheel.getWheelRotation();
+        int modifiers = e_wheel.getModifiersEx();
         boolean isShiftDown = (modifiers & MouseEvent.SHIFT_DOWN_MASK) != 0;
         if(amount == 0) return;
         Point scroll = new Point(0, amount);
@@ -30,25 +31,26 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         
     }
 
-    public void mouseClick(MouseEvent paramMouseEvent) {
-        Point point = paramMouseEvent.getPoint();
-        point.translate((this.view.displayMousePointer).x, (this.view.displayMousePointer).y);
-        System.out.println(point);
+    // マウスクリック
+    public void mouseClicked(MouseEvent e_click) {
+        Point clickedpoint = e_click.getPoint();
+    }
+    public void mousePressed(MouseEvent e_press) {
+        Point pressedpoint = e_press.getPoint();
+    }
+    public void mouseReleased(MouseEvent e_release) {
+        Point releasedpoint = e_release.getPoint();
     }
 
-    public void mouseRightClick(MouseEvent paramMouseEvent){
-        
-    }
-
-    public void mouseDrag(MouseEvent paramMouseEvent) {
+    public void mouseDrag(MouseEvent e_drag) {
     Cursor cursor = Cursor.getPredefinedCursor(13);
-    Component component = (Component)paramMouseEvent.getSource();
+    Component component = (Component)e_drag.getSource();
     component.setCursor(cursor);
-    this.current = paramMouseEvent.getPoint();
+    this.current = e_drag.getPoint();
     Integer integer1 = Integer.valueOf(this.current.x - this.previous.x);
     Integer integer2 = Integer.valueOf(this.current.y - this.previous.y);
     Point point = new Point(integer1.intValue(), integer2.intValue());
-    scrollBy(point, paramMouseEvent);
+    scrollBy(point, e_drag);
     this.previous = this.current;
     }
   
