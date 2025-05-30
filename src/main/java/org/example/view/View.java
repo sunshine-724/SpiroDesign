@@ -38,14 +38,15 @@ public class View extends JPanel {
     public View(Model model) {
         this.model = model;
 
-        // レイアウトマネージャーは要件によって適切なものを選択してください（例: BorderLayout, GridLayoutなど）
-        // 現在はnullレイアウトが使用されていますが、これはUIの柔軟性を低下させます。
+        // レイアウトマネージャーは要件によって適切なものを選択（例: BorderLayout, GridLayoutなど）
+        // 現在はnullレイアウトが使用されていますが、これはUIの柔軟性を低下させる。
         this.setLayout(null);
         this.setBackground(Color.WHITE);
 
         // UIコンポーネントの初期化
         this.MenuDisplay = new JPanel();
-        // MenuDisplayも適切なレイアウトマネージャーを使用することを推奨します。
+
+        // MenuDisplayも適切なレイアウトマネージャーを使用したい。
         MenuDisplay.setLayout(null);
 
         // ボタンのマップを初期化
@@ -53,13 +54,12 @@ public class View extends JPanel {
         this.penSizeDisplay = new HashMap<>();
 
         // subButtonマップにボタンを作成し追加
-        // 「Save」と「Load」ボタンを追加
         String[] buttonNames = { "Pen", "SpurGear", "PinionGear", "Start", "Stop", "Clear", "Save", "Load" };
         for (String name : buttonNames) {
             JButton button = new JButton(name);
             subButton.put(name, button);
             MenuDisplay.add(button);
-            // アクションリスナーはControllerで追加する必要があります。
+            // アクションリスナーはControllerで追加する必要がある。
             // 例: button.addActionListener(controllerInstance);
         }
 
@@ -69,25 +69,25 @@ public class View extends JPanel {
             JButton button = new JButton(size);
             penSizeDisplay.put(size, button);
             MenuDisplay.add(button);
-            // アクションリスナーはControllerで追加する必要があります。
+            // アクションリスナーはControllerで追加する必要がある。
         }
 
         // スピード表示用テキストフィールドを初期化
         this.speedDisplay = new JTextField("0.0");
         speedDisplay.setEditable(true); // Controllerで速度変更を受け付ける場合
         MenuDisplay.add(speedDisplay);
-        // アクションリスナーはControllerで追加する必要があります。
+        // アクションリスナーはControllerで追加する必要がある。
         // 例: speedDisplay.addActionListener(controllerInstance);
 
         // カラーチューザーを初期化し、メニューパネルに追加
         this.colorPalletDisplay = new JColorChooser();
         MenuDisplay.add(colorPalletDisplay);
-        // カラー選択イベントリスナーはControllerで追加する必要があります。
+        // カラー選択イベントリスナーはControllerで追加する必要がある。
 
         // メインパネルにMenuDisplayを追加
         this.add(MenuDisplay);
 
-        // コンポーネントのサイズと位置を設定（仮の値、レイアウトマネージャーの使用を強く推奨）
+        // コンポーネントのサイズと位置を設定
         MenuDisplay.setBounds(10, 10, 200, 600);
         int yOffset = 10;
         for (JButton button : subButton.values()) {
@@ -146,7 +146,7 @@ public class View extends JPanel {
         }
 
         // スピログラフの軌跡を描画
-        displaySpirographPath(g2d);
+        displaySpirographLocus(g2d); // メソッド名を変更
 
         // ペンの描画 (現在のペン先の位置)
         Point2D.Double penPosition = model.getPenPosition();
@@ -238,32 +238,31 @@ public class View extends JPanel {
         g.setStroke(originalStroke);
     }
 
-    private void displaySpirographPath(Graphics2D g2d) {
+    /**
+     * スピログラフの軌跡（Locus）を描画するメソッド
+     *
+     * @param g2d 描画コンテキスト
+     */
+    private void displaySpirographLocus(Graphics2D g2d) { // メソッド名を変更
         Color originalColor = g2d.getColor();
         java.awt.Stroke originalStroke = g2d.getStroke();
 
         g2d.setColor(model.getPenColor());
         g2d.setStroke(new BasicStroke((float) model.getPenSize()));
 
-        long startTime = model.getSpirographStartTime();
-        long currentTime = model.getSpirographCurrentTime();
+        // Modelから軌跡の全データを取得
+        // Modelクラスに List<Point2D.Double> locus を保持し、
+        // public List<Point2D.Double> getLocus() メソッドを追加して
+        // 軌跡の履歴データを提供するようにModelを変更する必要がありそう。
+        // Modelが現在の実装のままだと、この描画は正しく機能しない。
+        java.util.List<Point2D.Double> locus = model.getLocus();
 
-        long step = 1;
-
-        Point2D.Double prevPoint = null;
-
-        // 注意: ModelのgetPenPositionAtTime()は現在、引数tを無視して現在のペン位置を返します。
-        // スピログラフの軌跡を正しく描画するには、Modelが過去の時点でのペン位置を計算または保持し、
-        // その履歴データを提供するように変更する必要があります。
-        // 現状のModelのgetPenPositionAtTime()では、このループは常に現在のペン位置を描画しようとします。
-        for (long t = 0; t <= currentTime - startTime; t += step) {
-            Point2D.Double currentPoint = model.getPenPositionAtTime();
-            if (currentPoint != null) {
-                if (prevPoint != null) {
-                    g2d.drawLine((int) prevPoint.x, (int) prevPoint.y,
-                            (int) currentPoint.x, (int) currentPoint.y);
-                }
-                prevPoint = currentPoint;
+        if (locus != null && locus.size() > 1) {
+            // 軌跡の点を線で結んで描画
+            for (int i = 0; i < locus.size() - 1; i++) {
+                Point2D.Double p1 = locus.get(i);
+                Point2D.Double p2 = locus.get(i + 1);
+                g2d.drawLine((int) p1.x, (int) p1.y, (int) p2.x, (int) p2.y);
             }
         }
 
