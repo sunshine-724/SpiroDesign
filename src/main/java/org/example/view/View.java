@@ -1,10 +1,3 @@
-/*
- * 実際のボタンの配置やサイズはプロジェクトの要件に合わせて調整が必要
-   レイアウトマネージャーは要件によって適切なものを選択
-   ボタンやテキストフィールドにアクションリスナーを追加する必要（Controller との連携部分
-   Graphic2Dは正しくはGraphics2D
- */
-
 package org.example.view;
 
 import java.awt.Color;
@@ -13,20 +6,16 @@ import java.awt.Graphics2D;
 import java.awt.BasicStroke;
 import java.awt.RenderingHints;
 import java.awt.geom.Point2D;
-import java.awt.geom.AffineTransform; //AffineTransformをインポート
+import java.awt.geom.AffineTransform;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.List;
-
 import javax.swing.JButton;
 import javax.swing.JColorChooser;
+import javax.swing.JFileChooser;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import org.example.model.Model;
-
-import java.awt.event.MouseAdapter; // MouseAdapterをインポート
-import java.awt.event.MouseEvent; // MouseEventをインポート
-import java.awt.Point; // Pointをインポート
+import java.io.File;
 
 public class View extends JPanel {
 
@@ -46,65 +35,58 @@ public class View extends JPanel {
     private static final double MIN_SCALE = 0.5; // 最小スケール（50%）
     private static final double MAX_SCALE = 2.0; // 最大スケール（200%）
 
-    // 画面移動用の変数
-    private double translateX = 0;
-    private double translateY = 0;
-    private Point lastMousePoint; // マウスドラッグ時の前回の座標
-
     public View(Model model) {
-        // Initialize the view
         this.model = model;
 
-        // Set panel properties
-        this.setLayout(null); // or use appropriate layout manager
+        // 現在はnullレイアウトが使用
+        this.setLayout(null);
         this.setBackground(Color.WHITE);
 
-        // Initialize UI components
+        // UIコンポーネントの初期化
         this.MenuDisplay = new JPanel();
-        MenuDisplay.setLayout(null); // or use appropriate layout manager
+        // MenuDisplayも適切なレイアウトマネージャーを使用したい
+        MenuDisplay.setLayout(null);
 
-        // Initialize maps for buttons
+        // ボタンのマップを初期化
         this.subButton = new HashMap<>();
         this.penSizeDisplay = new HashMap<>();
 
-        // Create and add buttons to subButton map
+        // subButtonマップにボタンを作成し追加
         String[] buttonNames = { "Pen", "SpurGear", "PinionGear", "Start", "Stop", "Clear" };
         for (String name : buttonNames) {
             JButton button = new JButton(name);
             subButton.put(name, button);
             MenuDisplay.add(button);
-            // Add button locations and sizes as needed
-            // 例: button.setBounds(x, y, width, height);
+            // アクションリスナーはControllerで追加する必要がある。
+            // 例: button.addActionListener(controllerInstance);
         }
 
-        // Create and add buttons to penSizeDisplay map
+        // penSizeDisplayマップにボタンを作成し追加
         String[] penSizes = { "Small", "Medium", "Large" };
         for (String size : penSizes) {
             JButton button = new JButton(size);
             penSizeDisplay.put(size, button);
             MenuDisplay.add(button);
-            // Add button locations and sizes as needed
-            // 例: button.setBounds(x, y, width, height);
+            // アクションリスナーはControllerで追加する必要がありそう。
         }
 
-        // Initialize text field for speed display
+        // スピード表示用テキストフィールドを初期化
         this.speedDisplay = new JTextField("0.0");
-        speedDisplay.setEditable(true);
+        speedDisplay.setEditable(true); // Controllerで速度変更を受け付ける場合
         MenuDisplay.add(speedDisplay);
-        // 例: speedDisplay.setBounds(x, y, width, height);
+        // アクションリスナーはControllerで追加する必要がある。
+        // 例: speedDisplay.addActionListener(controllerInstance);
 
-        // Initialize color chooser
+        // カラーチューザーを初期化し、メニューパネルに追加
         this.colorPalletDisplay = new JColorChooser();
-        MenuDisplay.add(colorPalletDisplay); // メニューパネルに追加
-        // 例: colorPalletDisplay.setBounds(x, y, width, height);
+        MenuDisplay.add(colorPalletDisplay);
+        // カラー選択イベントリスナーはControllerで追加する必要がある。
 
-        // Add MenuDisplay to the main panel
+        // メインパネルにMenuDisplayを追加
         this.add(MenuDisplay);
 
-        // Set sizes and positions (仮の値、要調整)
-        MenuDisplay.setBounds(10, 10, 200, 600); // Adjust as needed
-        // ボタンやテキストフィールドの位置とサイズもここで設定するか、
-        // MenuDisplayのレイアウトマネージャーを使う
+        // コンポーネントのサイズと位置を設定（仮の値、レイアウトマネージャーの使用したい）
+        MenuDisplay.setBounds(10, 10, 200, 600);
         int yOffset = 10;
         for (JButton button : subButton.values()) {
             button.setBounds(10, yOffset, 180, 30);
@@ -116,41 +98,8 @@ public class View extends JPanel {
             button.setBounds(10, yOffset, 180, 30);
             yOffset += 35;
         }
-        colorPalletDisplay.setBounds(10, yOffset, 180, 250); // カラーチューザーは大きめに
+        colorPalletDisplay.setBounds(10, yOffset, 180, 250);
 
-        // マウスリスナーを追加
-        addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                // ドラッグ開始時のマウス座標を記録
-                lastMousePoint = e.getPoint();
-            }
-        });
-
-        addMouseMotionListener(new MouseAdapter() {
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                if (lastMousePoint != null) {
-                    // 現在のマウス座標と前回の座標の差分を計算
-                    double dx = e.getX() - lastMousePoint.x;
-                    double dy = e.getY() - lastMousePoint.y;
-
-                    // 画面移動量を更新
-                    // マウスの移動は画面ピクセル単位だが、translateX/Yは「元の座標系」での移動量なので、
-                    // 現在のスケールで割る必要がある
-                    translateX += dx / scale;
-                    translateY += dy / scale;
-
-                    // 前回のマウス座標を更新
-                    lastMousePoint = e.getPoint();
-
-                    // 再描画を要求
-                    repaint();
-                }
-            }
-        });
-
-        // Make the panel visible
         this.setVisible(true);
     }
 
@@ -177,30 +126,20 @@ public class View extends JPanel {
         }
 
         // 現在のTransformを保存
-        // これにより、スケーリングが適用された後も、他のUIコンポーネント（MenuDisplayなど）
-        // が元のスケールで描画されるようにできます。
         AffineTransform originalTransform = g2d.getTransform();
 
-        // 画面移動の適用 (拡大縮小の前に適用)
-        g2d.translate(translateX, translateY);
-
         // スケーリングの適用
-        // これ以降の描画はすべてこのスケールで描画されます
         g2d.scale(scale, scale);
 
         // スパーギアの描画
         Point2D.Double spurPosition = model.getSpurGearPosition();
         if (spurPosition != null) {
-            // displaySpurメソッド内ではすでにGraphics2Dにスケールが適用されているため、
-            // ここでさらにscaleを乗算する必要はありません。
             displaySpur(g2d, spurPosition);
         }
 
         // ピニオンギアの描画
         Point2D.Double pinionPosition = model.getPinionGearPosition();
         if (pinionPosition != null) {
-            // displayPinionメソッド内ではすでにGraphics2Dにスケールが適用されているため、
-            // ここでさらにscaleを乗算する必要はありません。
             displayPinion(g2d, pinionPosition);
         }
 
@@ -211,18 +150,14 @@ public class View extends JPanel {
         Point2D.Double penPosition = model.getPenPosition();
         Color penColor = model.getPenColor();
         if (penPosition != null) {
-            // displayDrawPenメソッド内ではすでにGraphics2Dにスケールが適用されているため、
-            // ここでさらにscaleを乗算する必要はありません。
             displayDrawPen(g2d, penPosition, penColor);
         }
 
         // スケールを元に戻す
-        // これを忘れると、MenuDisplayなどのUIコンポーネントも拡大縮小されてしまいます。
         g2d.setTransform(originalTransform);
 
         // 現在のスケールを表示 (スケールが元に戻された後に描画)
         g2d.setColor(Color.BLACK);
-        // getWidth()やgetHeight()はパネルの実際のサイズなので、スケールを元に戻した後に描画
         g2d.drawString("Scale: " + getScalePercent(), 10, getHeight() - 10);
     }
 
@@ -233,29 +168,19 @@ public class View extends JPanel {
      * @param position ピニオンギアの中心位置 (Modelからの生座標)
      */
     public void displayPinion(Graphics2D g, Point2D.Double position) {
-        // 元の設定を保存
         Color originalColor = g.getColor();
         java.awt.Stroke originalStroke = g.getStroke();
 
-        // 描画設定
         g.setColor(Color.BLUE);
         g.setStroke(new BasicStroke(2.0f));
-
-        // アンチエイリアス設定はpaintComponentで設定済みだが、念のため
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // モデルからピニオンギアの半径を取得。
-        // Graphics2Dにすでにスケールが適用されているため、ここではscaleを乗算しない。
         double radius = model.getPinionGearRadius();
-
-        // 円の左上座標を計算（中心座標から半径分を引く）
         double x = position.x - radius;
         double y = position.y - radius;
 
-        // 円を描画
         g.drawOval((int) x, (int) y, (int) (radius * 2), (int) (radius * 2));
 
-        // グラフィックス設定を元に戻す
         g.setColor(originalColor);
         g.setStroke(originalStroke);
     }
@@ -271,29 +196,19 @@ public class View extends JPanel {
      * @param position スパーギアの中心位置 (Modelからの生座標)
      */
     public void displaySpur(Graphics2D g, Point2D.Double position) {
-        // 元の設定を保存
         Color originalColor = g.getColor();
         java.awt.Stroke originalStroke = g.getStroke();
 
-        // 描画設定
         g.setColor(Color.RED);
         g.setStroke(new BasicStroke(2.0f));
-
-        // アンチエイリアス設定はpaintComponentで設定済みだが、念のため
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // モデルからスパーギアの半径を取得。
-        // Graphics2Dにすでにスケールが適用されているため、ここではscaleを乗算しない。
         double radius = model.getSpurGearRadius();
-
-        // 円の左上座標を計算（中心座標から半径分を引く）
         double x = position.x - radius;
         double y = position.y - radius;
 
-        // 円を描画
         g.drawOval((int) x, (int) y, (int) (radius * 2), (int) (radius * 2));
 
-        // 元の設定に戻す
         g.setColor(originalColor);
         g.setStroke(originalStroke);
     }
@@ -303,64 +218,51 @@ public class View extends JPanel {
      *
      * @param g        描画コンテキスト
      * @param position ペンポイントの位置 (Modelからの生座標)
-     * @param color    ペンの色（引数として渡されるが、デフォルトは緑色）
+     * @param color    ペンの色
      */
     public void displayDrawPen(Graphics2D g, Point2D.Double position, Color color) {
-        // 元の設定を保存
         Color originalColor = g.getColor();
         java.awt.Stroke originalStroke = g.getStroke();
 
-        // 描画設定
-        // 引数colorが指定されていなければ緑色を使用
         g.setColor(color != null ? color : Color.GREEN);
-        // ペン先のサイズはModelから取得するか、固定値とする
-        g.setStroke(new BasicStroke(2.0f));
-        // ペンポイントのサイズ
+        double penSize = model.getPenSize(); // Modelからペンサイズを取得
+        g.setStroke(new BasicStroke((float) penSize)); // ペンの太さとして利用
 
-        double penSize = model.getPenSize(); // メソッド名を変更
-
-        // アンチエイリアス設定はpaintComponentで設定済みだが、念のため
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // ペン先のサイズは、描画される点や円の半径として使用
-        g.fillOval((int) (position.x - penSize / 2), (int) (position.y - penSize / 2),
-                (int) penSize, (int) penSize);
+        // 点（小さな円）を描画
+        g.fillOval((int) (position.x - penSize / 2), (int) (position.y - penSize / 2), (int) penSize, (int) penSize);
 
-        // 元の設定に戻す
         g.setColor(originalColor);
         g.setStroke(originalStroke);
     }
 
-    /**
-     * スピログラフの軌跡を描画するメソッド
-     * Modelから軌跡の点を逐次計算して描画します。
-     *
-     * @param g2d Graphics2Dオブジェクト
-     */
     private void displaySpirographPath(Graphics2D g2d) {
-        // 元の設定を保存
         Color originalColor = g2d.getColor();
         java.awt.Stroke originalStroke = g2d.getStroke();
 
-        // 軌跡の描画設定
         g2d.setColor(model.getPenColor());
-        g2d.setStroke(new BasicStroke((float) model.getPenSize())); // メソッド名を変更
+        g2d.setStroke(new BasicStroke((float) model.getPenSize())); // Modelからペンサイズを取得
 
         long startTime = model.getSpirographStartTime();
         long currentTime = model.getSpirographCurrentTime();
 
         // 描画の解像度 (ミリ秒単位)。この値が小さいほど滑らかだが、計算量が増える
-        // 例: 1ミリ秒ごとに点を計算
         long step = 1;
 
         Point2D.Double prevPoint = null;
 
-        // 描画開始から現在までの軌跡を再計算して描画
-        for (long t = 0; t <= currentTime; t += step) {
-            Point2D.Double currentPoint = model.getPenPositionAtTime(t);
+        // 注意: ModelのgetPenPositionAtTime()は現在、引数tを無視して現在のペン位置を返します。
+        // スピログラフの軌跡を正しく描画するには、Modelが過去の時点でのペン位置を計算または保持し、
+        // その履歴データを提供するように変更する必要があります。
+        // 現状のModelのgetPenPositionAtTime()では、このループは常に現在のペン位置を描画しようとします。
+        for (long t = 0; t <= currentTime - startTime; t += step) { // 経過時間でループ
+            // Modelから特定の時点でのペン位置を取得するメソッドが必要です
+            // 現在のModelのgetPenPositionAtTime()は引数を取らず、現在の位置を返すため、
+            // この描画ロジックはModelの変更を必要とします。
+            Point2D.Double currentPoint = model.getPenPositionAtTime(); // ここは本来 model.getPenPositionAtTime(t) となるべき
             if (currentPoint != null) {
                 if (prevPoint != null) {
-                    // 前の点と現在の点を線で結ぶ
                     g2d.drawLine((int) prevPoint.x, (int) prevPoint.y,
                             (int) currentPoint.x, (int) currentPoint.y);
                 }
@@ -368,7 +270,6 @@ public class View extends JPanel {
             }
         }
 
-        // 元の設定に戻す
         g2d.setColor(originalColor);
         g2d.setStroke(originalStroke);
     }
@@ -379,11 +280,9 @@ public class View extends JPanel {
      * @param zoomIn trueなら拡大、falseなら縮小
      */
     public void scaling(boolean zoomIn) {
-        // 拡大または縮小
-        double scaleChange = zoomIn ? 0.1 : -0.1; // 10%ずつ変更
+        double scaleChange = zoomIn ? 0.1 : -0.1;
         double newScale = scale + scaleChange;
 
-        // スケール制限内かチェック
         if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
             scale = newScale;
             repaint(); // 新しいスケールで再描画
@@ -420,4 +319,31 @@ public class View extends JPanel {
         return (int) (scale * 100) + "%";
     }
 
+    /**
+     * ファイル保存場所を選択する
+     *
+     * @return 選択されたファイルパス（Fileオブジェクト）
+     */
+    public File chooseSaveFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        int result = fileChooser.showSaveDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            return fileChooser.getSelectedFile();
+        }
+        return null;
+    }
+
+    /**
+     * ファイル読み込み場所を選択する
+     *
+     * @return 選択されたファイルパス（Fileオブジェクト）
+     */
+    public File chooseLoadFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            return fileChooser.getSelectedFile();
+        }
+        return null;
+    }
 }
