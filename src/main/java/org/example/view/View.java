@@ -10,47 +10,32 @@
  * - スピログラフの軌跡描画メソッド`displaySpirographPath`を`displaySpirographLocus`に名称変更し、
  * Modelから軌跡の全データ（`List<Point2D.Double> locus`）を取得して描画するようロジックを修正した。
  * また、Modelがこのデータを提供するよう変更が必要である旨の重要なコメントを追加した。
- * - ユーザー画面移動（パン）機能を追加した。
- * - マウスドラッグによる描画領域の移動を可能にするため、`viewOffset`変数を導入した。
- * - `MouseListener`および`MouseMotionListener`を追加し、マウスイベントを処理する。
- * - `paintComponent`メソッド内で、描画前に`viewOffset`を`Graphics2D`の変換に適用する。
+ * - ユーザー画面移動（パン）機能のためのマウスリスナーをView内部から削除した。
+ * これはControllerがマウスイベントを一元的に処理するためである。
+ * - スパーギアの半径をピッキングしてドラッグで決定できるようにするための機能を追加した。
+ * - `isDefiningSpurGear`, `spurGearCenterScreen`, `currentDragPointScreen`変数を追加した。
+ * - `setDefiningSpurGear`, `setSpurGearCenterScreen`, `setCurrentDragPointScreen`, `clearSpurGearDefinition`
+ * といったControllerがViewの状態を操作するための公開メソッドを追加した。
+ * - `screenToWorld`ヘルパーメソッドを追加し、画面座標をワールド座標に変換できるようにした。
+ * - `paintComponent`メソッド内で、スパーギア定義中に一時的な円を描画するロジックを追加した。
+ * - **ピニオンギアの半径をピッキングしてドラッグで決定できるようにする機能を追加した。（スパーギアより優先）**
+ * - `isDefiningPinionGear`, `pinionGearCenterScreen`, `currentDragPointScreenForPinion`変数を追加した。
+ * - `setDefiningPinionGear`, `setPinionGearCenterScreen`, `setCurrentDragPointScreenForPinion`, `clearPinionGearDefinition`
+ * といったControllerがViewの状態を操作するための公開メソッドを追加した。
+ * - `paintComponent`メソッド内で、ピニオンギア定義中に一時的な円を描画するロジックを追加した。この描画はスパーギアの仮描画よりも優先されるように（コードの後のほうに）配置した。
  * - コード全体で「Path」という用語を「Locus」に変更した。
  *
- * **主要機能:**
- * - **UIコンポーネントの表示**:
- * - ギア、ペン、スピログラフの軌跡を描画するキャンバスを提供する。
- * - ユーザー操作用のボタン（ペン、ギア、開始/停止、クリア、保存/読み込み）、
- * 速度入力フィールド、カラーピッカーなどのUI要素を配置する。
- * - 現在のスケール表示を行う。
- * - 注意: 現在、UIコンポーネントの配置にはnullレイアウトを使用しているが、
- * 柔軟性と保守性のためにSwingのレイアウトマネージャー（BorderLayout, GridLayout, GridBagLayoutなど）
- * の利用を強く推奨する。
- * - **Modelからのデータ取得と描画**:
- * - Modelクラスから描画に必要なデータ（ギアの位置、半径、ペンの位置、色、サイズ、軌跡データなど）
- * を取得し、それに基づいて画面にスピログラフを描画する。
- * - 特にスピログラフの軌跡（Locus）を描画するためには、Modelがペン位置の履歴を
- * `List<Point2D.Double>` として保持し、`public List<Point2D.Double> getLocus()`
- * メソッドで提供する必要がある。Modelがこのデータを提供しない場合、軌跡は正しく描画されない。
- * - **ユーザー入力の受付（間接的）**:
- * - UIコンポーネント（ボタン、テキストフィールドなど）を公開し、
- * Controllerがこれらのコンポーネントにアクションリスナーを設定できるようにする。
- * View自身は直接的なイベント処理を行わず、Controllerに処理を委譲する。
- * - **画面の拡大縮小機能**:
- * - スピログラフの描画領域を拡大・縮小する機能を提供する。
- * - **ユーザー画面移動（パン）機能**:
- * - マウスドラッグによって描画領域を移動させる機能を提供する。
- * - **ファイル選択ダイアログの提供**:
- * - ファイルの保存・読み込み時に使用するJFileChooserダイアログを提供する。
- *
- * **MVCモデルにおける役割:**
- * - **Modelとの関係性**:
- * - ViewはModelを参照し、Modelのgetterメソッドを通じて描画に必要なデータを読み取る。
- * - ViewはModelの状態を直接変更することはない。Modelの状態変更はControllerを介して行われる。
- * - **Controllerとの関係性**:
- * - ControllerはViewの公開されたUIコンポーネントにイベントリスナーを設定し、
- * ユーザーの操作（ボタンクリック、テキスト入力など）をViewから受け取る。
- * - Controllerは受け取ったユーザー操作に基づいてModelの状態を変更し、
- * 必要に応じてViewの`repaint()`メソッドを呼び出して再描画を指示する。
+ * **他クラスの必要な変更点:**
+ * - **Model.java**:
+ * - 軌跡（Locus）データを保持する`List<Point2D.Double> locus`フィールドを追加する必要がある。
+ * - `updateData()`メソッド内で、現在のペン位置を`locus`リストに追加する処理が必要である。
+ * - `public List<Point2D.Double> getLocus()`メソッドを追加する必要がある。
+ * - `Pen`クラスの`getPenSize()`メソッドが存在することを前提としている。
+ * - **Controller.java**:
+ * - `mouseDrag`メソッドは、標準の`MouseMotionListener`インターフェースの`mouseDragged`メソッドに名称を変更する必要がある。
+ * - ViewのインスタンスにController自身をマウスリスナーとして追加する必要がある。
+ * - スパーギア定義モードと**ピニオンギア定義モード**の管理、マウスイベントからの半径計算、Modelへの更新ロジックを追加する必要がある。
+ * - **ピニオンギア定義モードはスパーギア定義モードよりも優先度が高いことを考慮したロジックを実装する必要がある。**
  */
 
 package org.example.view;
@@ -61,9 +46,6 @@ import java.awt.Graphics2D;
 import java.awt.BasicStroke;
 import java.awt.RenderingHints;
 import java.awt.Point;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.Point2D;
 import java.awt.geom.AffineTransform;
 import java.util.Map;
@@ -94,30 +76,46 @@ public class View extends JPanel {
     private static final double MIN_SCALE = 0.5; // 最小スケール（50%）
     private static final double MAX_SCALE = 2.0; // 最大スケール（200%）
 
-    // ユーザー画面移動（パン）用の変数
+    // ユーザー画面移動（パン）用の変数 (Controllerによって管理されるため、Viewからは直接操作しない)
     private Point2D.Double viewOffset = new Point2D.Double(0, 0); // 描画内容のオフセット（ワールド座標系）
-    private Point lastMousePoint; // マウスドラッグ開始時の画面座標
-    private boolean isDragging = false; // ドラッグ中かどうか
+
+    // スパーギアの半径定義用の変数
+    private boolean isDefiningSpurGear = false; // スパーギアの半径定義中か
+    private Point spurGearCenterScreen = null; // スパーギアの中心点（画面座標）
+    private Point currentDragPointScreen = null; // 現在のドラッグ点（画面座標）
+
+    // ピニオンギアの半径定義用の変数
+    private boolean isDefiningPinionGear = false; // ピニオンギアの半径定義中か
+    private Point pinionGearCenterScreen = null; // ピニオンギアの中心点（画面座標）
+    private Point currentDragPointScreenForPinion = null; // 現在のドラッグ点（ピニオンギア用、画面座標）
 
     public View(Model model) {
         this.model = model;
 
+        // レイアウトマネージャーは要件によって適切なものを選択する（例: BorderLayout, GridLayoutなど）。
+        // 現在はnullレイアウトを使用しているが、これはUIの柔軟性を低下させる。
         this.setLayout(null);
         this.setBackground(Color.WHITE);
 
+        // UIコンポーネントの初期化
         this.MenuDisplay = new JPanel();
+        // MenuDisplayも適切なレイアウトマネージャーを使用することを推奨する。
         MenuDisplay.setLayout(null);
 
+        // ボタンのマップを初期化
         this.subButton = new HashMap<>();
         this.penSizeDisplay = new HashMap<>();
 
+        // subButtonマップにボタンを作成し追加
         String[] buttonNames = { "Pen", "SpurGear", "PinionGear", "Start", "Stop", "Clear", "Save", "Load" };
         for (String name : buttonNames) {
             JButton button = new JButton(name);
             subButton.put(name, button);
             MenuDisplay.add(button);
+            // アクションリスナーはControllerで追加する必要がある。
         }
 
+        // penSizeDisplayマップにボタンを作成し追加
         String[] penSizes = { "Small", "Medium", "Large" };
         for (String size : penSizes) {
             JButton button = new JButton(size);
@@ -125,15 +123,19 @@ public class View extends JPanel {
             MenuDisplay.add(button);
         }
 
+        // スピード表示用テキストフィールドを初期化
         this.speedDisplay = new JTextField("0.0");
         speedDisplay.setEditable(true);
         MenuDisplay.add(speedDisplay);
 
+        // カラーチューザーを初期化し、メニューパネルに追加
         this.colorPalletDisplay = new JColorChooser();
         MenuDisplay.add(colorPalletDisplay);
 
+        // メインパネルにMenuDisplayを追加
         this.add(MenuDisplay);
 
+        // コンポーネントのサイズと位置を設定（仮の値、レイアウトマネージャーの使用を強く推奨）
         MenuDisplay.setBounds(10, 10, 200, 600);
         int yOffset = 10;
         for (JButton button : subButton.values()) {
@@ -150,37 +152,9 @@ public class View extends JPanel {
 
         this.setVisible(true);
 
-        // マウスイベントリスナーの追加
-        this.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                lastMousePoint = e.getPoint();
-                isDragging = true;
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                isDragging = false;
-            }
-        });
-
-        this.addMouseMotionListener(new MouseMotionAdapter() {
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                if (isDragging) {
-                    // マウスの移動量を計算（画面ピクセル単位）
-                    double dx = e.getX() - lastMousePoint.getX();
-                    double dy = e.getY() - lastMousePoint.getY();
-
-                    // 画面上の移動量をワールド座標系に変換してオフセットに加算
-                    // スケールが適用されているため、移動量をスケールで割る
-                    viewOffset.setLocation(viewOffset.x + dx / scale, viewOffset.y + dy / scale);
-
-                    lastMousePoint = e.getPoint(); // 現在のマウス位置を更新
-                    repaint(); // 再描画
-                }
-            }
-        });
+        // View内部のマウスイベントリスナーは削除された。
+        // ControllerがViewにMouseListenerとMouseMotionListenerを追加し、
+        // すべてのマウスイベントを処理する。
     }
 
     /**
@@ -232,6 +206,41 @@ public class View extends JPanel {
         if (penPosition != null) {
             displayDrawPen(g2d, penPosition, penColor);
         }
+
+        // スパーギア定義中の仮描画
+        if (isDefiningSpurGear && spurGearCenterScreen != null) {
+            Point2D.Double centerWorld = screenToWorld(spurGearCenterScreen);
+            double tempRadius = 0;
+            if (currentDragPointScreen != null) {
+                // 画面座標での距離を計算し、ワールド座標での半径に変換
+                tempRadius = spurGearCenterScreen.distance(currentDragPointScreen) / scale;
+            }
+
+            g2d.setColor(Color.ORANGE); // 仮の描画色
+            g2d.setStroke(new BasicStroke(1.5f));
+            // 円の左上座標を計算（中心座標から半径分を引く）
+            double x = centerWorld.x - tempRadius;
+            double y = centerWorld.y - tempRadius;
+            g2d.drawOval((int) x, (int) y, (int) (tempRadius * 2), (int) (tempRadius * 2));
+        }
+
+        // ピニオンギア定義中の仮描画（スパーギアより優先）
+        if (isDefiningPinionGear && pinionGearCenterScreen != null) {
+            Point2D.Double centerWorld = screenToWorld(pinionGearCenterScreen);
+            double tempRadius = 0;
+            if (currentDragPointScreenForPinion != null) {
+                // 画面座標での距離を計算し、ワールド座標での半径に変換
+                tempRadius = pinionGearCenterScreen.distance(currentDragPointScreenForPinion) / scale;
+            }
+
+            g2d.setColor(Color.MAGENTA); // 仮の描画色（ピニオンギア用）
+            g2d.setStroke(new BasicStroke(1.5f));
+            // 円の左上座標を計算（中心座標から半径分を引く）
+            double x = centerWorld.x - tempRadius;
+            double y = centerWorld.y - tempRadius;
+            g2d.drawOval((int) x, (int) y, (int) (tempRadius * 2), (int) (tempRadius * 2));
+        }
+
 
         g2d.setTransform(originalTransform);
 
@@ -419,5 +428,127 @@ public class View extends JPanel {
             return fileChooser.getSelectedFile();
         }
         return null;
+    }
+
+    /**
+     * 画面座標をワールド座標に変換する。
+     *
+     * @param screenPoint 画面座標
+     * @return ワールド座標
+     */
+    public Point2D.Double screenToWorld(Point screenPoint) {
+        // オフセットとスケールを考慮して変換
+        double worldX = (screenPoint.getX() / scale) - (viewOffset.x / scale);
+        double worldY = (screenPoint.getY() / scale) - (viewOffset.y / scale);
+        return new Point2D.Double(worldX, worldY);
+    }
+
+    /**
+     * スパーギアの半径定義モードを設定する。
+     *
+     * @param defining trueの場合、定義モードを有効にする。
+     */
+    public void setDefiningSpurGear(boolean defining) {
+        this.isDefiningSpurGear = defining;
+        if (!defining) {
+            clearSpurGearDefinition(); // 定義モード終了時に状態をクリア
+        }
+        repaint(); // 描画を更新
+    }
+
+    /**
+     * スパーギアの中心点（画面座標）を設定する。
+     *
+     * @param p 中心点（画面座標）
+     */
+    public void setSpurGearCenterScreen(Point p) {
+        this.spurGearCenterScreen = p;
+        this.currentDragPointScreen = p; // ドラッグ開始時は中心点と同じ
+        repaint();
+    }
+
+    /**
+     * 現在のドラッグ点（画面座標）を設定する。
+     *
+     * @param p 現在のドラッグ点（画面座標）
+     */
+    public void setCurrentDragPointScreen(Point p) {
+        this.currentDragPointScreen = p;
+        repaint();
+    }
+
+    /**
+     * スパーギア定義に関する状態をクリアする。
+     */
+    public void clearSpurGearDefinition() {
+        this.isDefiningSpurGear = false;
+        this.spurGearCenterScreen = null;
+        this.currentDragPointScreen = null;
+        repaint();
+    }
+
+    /**
+     * ピニオンギアの半径定義モードを設定する。
+     *
+     * @param defining trueの場合、定義モードを有効にする。
+     */
+    public void setDefiningPinionGear(boolean defining) {
+        this.isDefiningPinionGear = defining;
+        if (!defining) {
+            clearPinionGearDefinition(); // 定義モード終了時に状態をクリア
+        }
+        repaint(); // 描画を更新
+    }
+
+    /**
+     * ピニオンギアの中心点（画面座標）を設定する。
+     *
+     * @param p 中心点（画面座標）
+     */
+    public void setPinionGearCenterScreen(Point p) {
+        this.pinionGearCenterScreen = p;
+        this.currentDragPointScreenForPinion = p; // ドラッグ開始時は中心点と同じ
+        repaint();
+    }
+
+    /**
+     * 現在のドラッグ点（ピニオンギア用、画面座標）を設定する。
+     *
+     * @param p 現在のドラッグ点（画面座標）
+     */
+    public void setCurrentDragPointScreenForPinion(Point p) {
+        this.currentDragPointScreenForPinion = p;
+        repaint();
+    }
+
+    /**
+     * ピニオンギア定義に関する状態をクリアする。
+     */
+    public void clearPinionGearDefinition() {
+        this.isDefiningPinionGear = false;
+        this.pinionGearCenterScreen = null;
+        this.currentDragPointScreenForPinion = null;
+        repaint();
+    }
+
+    /**
+     * 現在のViewの描画オフセットを取得する。
+     * Controllerがパンニング計算に利用する。
+     *
+     * @return 現在の描画オフセット
+     */
+    public Point2D.Double getViewOffset() {
+        return viewOffset;
+    }
+
+    /**
+     * Viewの描画オフセットを設定する。
+     * Controllerがパンニング計算後にViewを更新する。
+     *
+     * @param offset 新しい描画オフセット
+     */
+    public void setViewOffset(Point2D.Double offset) {
+        this.viewOffset = offset;
+        repaint();
     }
 }
