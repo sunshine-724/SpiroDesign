@@ -1,9 +1,5 @@
 package org.example.controller;
-
-import java.awt.Component;
-import java.awt.Cursor;
 import java.awt.Point;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
@@ -12,12 +8,17 @@ import java.awt.geom.Point2D;
 import javax.swing.event.MouseInputAdapter;
 
 import org.example.model.Model;
+import org.example.model.Gear;
+import org.example.model.Pen;
 import org.example.view.View;
 
 
 public class Controller extends MouseInputAdapter implements MouseWheelListener {
     protected Model model;
     protected View view;
+    private Gear spurGear; 
+    private Gear pinionGear;
+    private Pen pen;
     private Point previous = null;
     private Point current = null;
 
@@ -52,11 +53,14 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     private Point pressPoint;
     private Point2D gearCenter;
 
-    public void onSpurGearButtonClicked
-
     // マウスクリック
     public void mouseClicked(MouseEvent e_click) {
         Point clickedpoint = e_click.getPoint();
+        model.Point(clickedpoint);
+    }
+
+    public void mousePressed(MouseEvent e_press) {
+        Point pressedPoint = e_press.getPoint();
         Point2D worldPoint = view.toWorldCoordinates(pressedPoint);
         boolean inSpur = spurGear.contains(worldPoint);
         boolean inPinion = pinionGear.contains(worldPoint);
@@ -67,24 +71,43 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
             currentMode = Mode.PINION_GEAR;
         }else if (!inSpur) {
             currentMode = Mode.PAN;
+        }else {
+            currentMode = Mode.NONE;
         }
-        }
-        model.Point(clickedpoint);
-    }
-
-    public void mousePressed(MouseEvent e_press) {
-        Point pressedpoint = e_press.getPoint();
-        model.Point(pressedpoint);
+        model.Point(pressedPoint);
     }
 
     public void mouseReleased(MouseEvent e_release) {
-        Point releasedpoint = e_release.getPoint();
-        model.Point(releasedpoint);
+        Point releasedPoint = e_release.getPoint();
+        currentMode = Mode.NONE;
+        model.Point(releasedPoint);
     }
 
-    /*public void mouseDragged(MouseEvent e_drag) {
+    public void mouseDragged(MouseEvent e_drag) {
+        Point currentPoint = e_drag.getPoint();
+        Point2D currentWorld = view.toWorldCoordinates(currentPoint);
+        switch (currentMode) {
+            case SPUR_GEAR:
+                spurGear.moveTo(currentWorld);
+                view.repaint();
+                break;
+            case PINION_GEAR:
+                pinionGear.moveTo(currentWorld);
+                view.repaint();
+                break;
+            case PAN:
+                int dx = currentPoint.x - pressedPoint.x;
+                int dy = currentPoint.y - pressedPoint.y;
+                view.pan(dx, dy);
+                pressedPoint = currentPoint;
+                break;
+        }
+    }
 
-    }*/
+    public boolean contains(Point2D p) {
+        double distance = center.distance(p);
+        return distance <= radius;
+    }
   
 }
 
