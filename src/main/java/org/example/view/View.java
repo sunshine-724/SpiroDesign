@@ -18,11 +18,16 @@
  * といったControllerがViewの状態を操作するための公開メソッドを追加した。
  * - `screenToWorld`ヘルパーメソッドを追加し、画面座標をワールド座標に変換できるようにした。
  * - `paintComponent`メソッド内で、スパーギア定義中に一時的な円を描画するロジックを追加した。
- * - **ピニオンギアの半径をピッキングしてドラッグで決定できるようにする機能を追加した。（スパーギアより優先）**
+ * - ピニオンギアの半径をピッキングしてドラッグで決定できるようにする機能を追加した。（スパーギアより優先）
  * - `isDefiningPinionGear`, `pinionGearCenterScreen`, `currentDragPointScreenForPinion`変数を追加した。
  * - `setDefiningPinionGear`, `setPinionGearCenterScreen`, `setCurrentDragPointScreenForPinion`, `clearPinionGearDefinition`
  * といったControllerがViewの状態を操作するための公開メソッドを追加した。
  * - `paintComponent`メソッド内で、ピニオンギア定義中に一時的な円を描画するロジックを追加した。この描画はスパーギアの仮描画よりも優先されるように（コードの後のほうに）配置した。
+ * - **スパーギアの中心をピッキングしてドラッグすることで、スピログラフ全体を並行移動する機能を追加した。（半径決定モードより優先）**
+ * - `isDraggingSpiroGraph`, `spiroGraphDragOffsetWorld`変数を追加した。
+ * - `setDraggingSpiroGraph`, `setSpiroGraphDragOffsetWorld`といったControllerがViewの状態を操作するための公開メソッドを追加した。
+ * - `paintComponent`メソッド内で、スピログラフ移動モードが有効な場合、すべての描画要素（ギア、ペン、軌跡）に`spiroGraphDragOffsetWorld`を適用するロジックを追加した。
+ * - `displaySpirographLocus`メソッドが一時的なオフセットを受け取るように変更し、軌跡の各点に適用するよう修正した。
  * - コード全体で「Path」という用語を「Locus」に変更した。
  *
  * **他クラスの必要な変更点:**
@@ -34,8 +39,8 @@
  * - **Controller.java**:
  * - `mouseDrag`メソッドは、標準の`MouseMotionListener`インターフェースの`mouseDragged`メソッドに名称を変更する必要がある。
  * - ViewのインスタンスにController自身をマウスリスナーとして追加する必要がある。
- * - スパーギア定義モードと**ピニオンギア定義モード**の管理、マウスイベントからの半径計算、Modelへの更新ロジックを追加する必要がある。
- * - **ピニオンギア定義モードはスパーギア定義モードよりも優先度が高いことを考慮したロジックを実装する必要がある。**
+ * - **スピログラフ移動モード（最優先）、ピニオンギア定義モード（次に優先）、スパーギア定義モード（その次）、パンニング（最低優先）の優先順位を考慮したマウスイベント処理ロジックを実装する必要がある。**
+ * - スピログラフ移動モード中、`mouseDragged`イベントで`view.setSpiroGraphDragOffsetWorld()`を呼び出し、`mouseReleased`イベントで`Model`の`spurGearPosition`を更新するロジックを追加する必要がある。その際、ピニオンギアやペンの位置はスパーギアに対する相対位置を維持したまま移動する必要があるため、Model内部での相対座標計算を適切に行う必要がある。
  */
 
 package org.example.view;
@@ -57,6 +62,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import org.example.model.Model;
 import java.io.File;
+import java.util.List; // List を明示的にインポート
 
 public class View extends JPanel {
 
@@ -88,6 +94,10 @@ public class View extends JPanel {
     private boolean isDefiningPinionGear = false; // ピニオンギアの半径定義中か
     private Point pinionGearCenterScreen = null; // ピニオンギアの中心点（画面座標）
     private Point currentDragPointScreenForPinion = null; // 現在のドラッグ点（ピニオンギア用、画面座標）
+
+    // スピログラフ全体移動用の変数（スパーギアのピッキング＆ドラッグ）
+    private boolean isDraggingSpiroGraph = false; // スピログラフ全体を移動中か
+    private Point2D.Double spiroGraphDragOffsetWorld = new Point2D.Double(0, 0); // スピログラフ移動中の一時的なワールド座標オフセット
 
     public View(Model model) {
         this.model = model;
@@ -185,26 +195,45 @@ public class View extends JPanel {
         // スケーリングの適用
         g2d.scale(scale, scale);
 
-        // スパーギアの描画
+        // Modelから現在の要素の位置を取得
         Point2D.Double spurPosition = model.getSpurGearPosition();
-        if (spurPosition != null) {
-            displaySpur(g2d, spurPosition);
+        Point2D.Double pinionPosition = model.getPinionGearPosition();
+        Point2D.Double penPosition = model.getPenPosition();
+        Color penColor = model.getPenColor();
+
+        // スピログラフ移動モード中の場合、一時的なオフセットを適用
+        Point2D.Double currentRenderOffset = new Point2D.Double(0, 0);
+        if (isDraggingSpiroGraph) {
+            currentRenderOffset = spiroGraphDragOffsetWorld;
+        }
+
+        // 描画用の効果的な位置を計算
+        Point2D.Double effectiveSpurPosition = (spurPosition != null)
+                ? new Point2D.Double(spurPosition.x + currentRenderOffset.x, spurPosition.y + currentRenderOffset.y)
+                : null;
+        Point2D.Double effectivePinionPosition = (pinionPosition != null)
+                ? new Point2D.Double(pinionPosition.x + currentRenderOffset.x, pinionPosition.y + currentRenderOffset.y)
+                : null;
+        Point2D.Double effectivePenPosition = (penPosition != null)
+                ? new Point2D.Double(penPosition.x + currentRenderOffset.x, penPosition.y + currentRenderOffset.y)
+                : null;
+
+        // スパーギアの描画
+        if (effectiveSpurPosition != null) {
+            displaySpur(g2d, effectiveSpurPosition);
         }
 
         // ピニオンギアの描画
-        Point2D.Double pinionPosition = model.getPinionGearPosition();
-        if (pinionPosition != null) {
-            displayPinion(g2d, pinionPosition);
+        if (effectivePinionPosition != null) {
+            displayPinion(g2d, effectivePinionPosition);
         }
 
-        // スピログラフの軌跡を描画
-        displaySpirographLocus(g2d);
+        // スピログラフの軌跡を描画（オフセットを渡す）
+        displaySpirographLocus(g2d, currentRenderOffset);
 
         // ペンの描画 (現在のペン先の位置)
-        Point2D.Double penPosition = model.getPenPosition();
-        Color penColor = model.getPenColor();
-        if (penPosition != null) {
-            displayDrawPen(g2d, penPosition, penColor);
+        if (effectivePenPosition != null) {
+            displayDrawPen(g2d, effectivePenPosition, penColor);
         }
 
         // スパーギア定義中の仮描画
@@ -240,7 +269,6 @@ public class View extends JPanel {
             double y = centerWorld.y - tempRadius;
             g2d.drawOval((int) x, (int) y, (int) (tempRadius * 2), (int) (tempRadius * 2));
         }
-
 
         g2d.setTransform(originalTransform);
 
@@ -327,9 +355,10 @@ public class View extends JPanel {
     /**
      * スピログラフの軌跡（Locus）を描画するメソッド
      *
-     * @param g2d 描画コンテキスト
+     * @param g2d             描画コンテキスト
+     * @param temporaryOffset スピログラフ移動中の一時的なワールド座標オフセット
      */
-    private void displaySpirographLocus(Graphics2D g2d) {
+    private void displaySpirographLocus(Graphics2D g2d, Point2D.Double temporaryOffset) {
         Color originalColor = g2d.getColor();
         java.awt.Stroke originalStroke = g2d.getStroke();
 
@@ -342,14 +371,15 @@ public class View extends JPanel {
         // public List<Point2D.Double> getLocus() メソッドで提供するよう
         // Modelクラスを変更する必要がある。
         // Modelが現在の実装のままだと、この描画は正しく機能しない。
-        java.util.List<Point2D.Double> locus = model.getLocus();
+        List<Point2D.Double> locus = model.getLocus();
 
         if (locus != null && locus.size() > 1) {
-            // 軌跡の点を線で結んで描画
+            // 軌跡の点を線で結んで描画。一時的なオフセットを各点に適用する。
             for (int i = 0; i < locus.size() - 1; i++) {
                 Point2D.Double p1 = locus.get(i);
                 Point2D.Double p2 = locus.get(i + 1);
-                g2d.drawLine((int) p1.x, (int) p1.y, (int) p2.x, (int) p2.y);
+                g2d.drawLine((int) (p1.x + temporaryOffset.x), (int) (p1.y + temporaryOffset.y),
+                        (int) (p2.x + temporaryOffset.x), (int) (p2.y + temporaryOffset.y));
             }
         }
 
@@ -438,6 +468,7 @@ public class View extends JPanel {
      */
     public Point2D.Double screenToWorld(Point screenPoint) {
         // オフセットとスケールを考慮して変換
+        // 描画オフセットを逆変換し、スケールで割る
         double worldX = (screenPoint.getX() / scale) - (viewOffset.x / scale);
         double worldY = (screenPoint.getY() / scale) - (viewOffset.y / scale);
         return new Point2D.Double(worldX, worldY);
@@ -529,6 +560,29 @@ public class View extends JPanel {
         this.pinionGearCenterScreen = null;
         this.currentDragPointScreenForPinion = null;
         repaint();
+    }
+
+    /**
+     * スピログラフ全体移動モードを設定する。
+     *
+     * @param dragging trueの場合、移動モードを有効にする。
+     */
+    public void setDraggingSpiroGraph(boolean dragging) {
+        this.isDraggingSpiroGraph = dragging;
+        if (!dragging) {
+            this.spiroGraphDragOffsetWorld.setLocation(0, 0); // 移動終了時にオフセットをリセット
+        }
+        repaint(); // 描画を更新
+    }
+
+    /**
+     * スピログラフ移動中の一時的なワールド座標オフセットを設定する。
+     *
+     * @param offset ワールド座標でのオフセット
+     */
+    public void setSpiroGraphDragOffsetWorld(Point2D.Double offset) {
+        this.spiroGraphDragOffsetWorld = offset;
+        repaint(); // 描画を更新
     }
 
     /**
