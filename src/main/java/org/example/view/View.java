@@ -18,44 +18,24 @@
  * といったControllerがViewの状態を操作するための公開メソッドを追加した。
  * - `screenToWorld`ヘルパーメソッドを追加し、画面座標をワールド座標に変換できるようにした。
  * - `paintComponent`メソッド内で、スパーギア定義中に一時的な円を描画するロジックを追加した。
- * - ピニオンギアの半径をドラッグで決定するモードを削除した。
- * - ピニオンギアをドラッグすることで位置を移動させる機能を追加した。（スパーギア半径決定モードより優先）
- * - `isDraggingPinionGear`, `pinionGearDragOffsetWorld`変数を追加した。
- * - `setDraggingPinionGear`, `setPinionGearDragOffsetWorld`といったControllerがViewの状態を操作するための公開メソッドを追加した。
- * - `paintComponent`メソッド内で、ピニオンギア移動モードが有効な場合、ピニオンギアとペンに一時的なオフセットを適用するロジックを追加した。
- * - スパーギアの中心をピッキングしてドラッグすることで、スピログラフ全体を並行移動する機能を追加した。（ピニオンギア移動モードより優先度が低い）
- * - `isDraggingSpiroGraph`, `spiroGraphDragOffsetWorld`変数を追加した。
- * - `setDraggingSpiroGraph`, `setSpiroGraphDragOffsetWorld`といったControllerがViewの状態を操作するための公開メソッドを追加した。
- * - `paintComponent`メソッド内で、スピログラフ移動モードが有効な場合、すべての描画要素（ギア、ペン、軌跡）に`spiroGraphDragOffsetWorld`を適用するロジックを追加した。
- * - `displaySpirographLocus`メソッドが一時的なオフセットを受け取るように変更し、軌跡の各点に適用するよう修正した。
+ * - **ピニオンギアの半径をピッキングしてドラッグで決定できるようにする機能を追加した。（スパーギアより優先）**
+ * - `isDefiningPinionGear`, `pinionGearCenterScreen`, `currentDragPointScreenForPinion`変数を追加した。
+ * - `setDefiningPinionGear`, `setPinionGearCenterScreen`, `setCurrentDragPointScreenForPinion`, `clearPinionGearDefinition`
+ * といったControllerがViewの状態を操作するための公開メソッドを追加した。
+ * - `paintComponent`メソッド内で、ピニオンギア定義中に一時的な円を描画するロジックを追加した。この描画はスパーギアの仮描画よりも優先されるように（コードの後のほうに）配置した。
  * - コード全体で「Path」という用語を「Locus」に変更した。
- * - `paintComponent`メソッド内で`penColor`の宣言スコープを広げ、メソッド全体でアクセス可能にした。
- * - ペンの位置をピッキングしてドラッグすることで定義できるようにする機能を追加した。（最優先）
- * - `isDefiningPen`, `penDefinitionStartScreenPoint`, `currentPenDefinitionDragScreenPoint`変数を追加した。
- * - `setDefiningPen`, `setPenDefinitionStartScreenPoint`, `setCurrentPenDefinitionDragScreenPoint`, `clearPenDefinition`といったControllerがViewの状態を操作するための公開メソッドを追加した。
- * - `paintComponent`メソッド内で、ペンの位置定義中に仮のペンとピニオンギア中心からの接続線を描画するロジックを追加した。この描画は、通常のペン描画よりも優先される。
  *
  * **他クラスの必要な変更点:**
  * - **Model.java**:
  * - 軌跡（Locus）データを保持する`List<Point2D.Double> locus`フィールドを追加する必要がある。
  * - `updateData()`メソッド内で、現在のペン位置を`locus`リストに追加する処理が必要である。
  * - `public List<Point2D.Double> getLocus()`メソッドを追加する必要がある。
- * - `Pen`クラスの`getPenSize()`、`getColor()`メソッドが存在することを前提としている。
- * - Penのピニオンギアに対する相対的な位置（距離と角度）を保持するフィールド（例: `penDistanceFromPinionCenter`, `penAngleOnPinion`）をPenクラスに追加する必要がある。
- * - これらの新しいペン位置パラメータを設定・取得するメソッド（例: `Pen.setRelativePosition(double distance, double angle)`や個別のsetter/getter）をPenクラスに追加する必要がある。
- * - Modelは、Controllerから受け取った相対位置に基づいてPenのこれらのパラメータを更新し、Penの`move`メソッドがこれらの新しい相対パラメータを考慮して絶対位置を計算するよう調整する必要がある。
+ * - `Pen`クラスの`getPenSize()`メソッドが存在することを前提としている。
  * - **Controller.java**:
- * - `mouseWheelMoved`メソッド内の`view.Point(scroll);`を`view.scaling(amount > 0);`のように修正し、マウスホイールの方向に応じたスケール変更を行う必要がある。
- * - Controllerのコンストラクタは、`Model`も引数として受け取るように変更し、`Model`のデータ操作を可能にする必要がある。
- * - マウスイベント処理のロジックを実装する必要がある。
- * - `mouseDragged`メソッドは現在コメントアウトされているため、実装を有効にする必要がある。
- * - モード（ペンの位置定義、ピニオンギア移動、スピログラフ全体移動、スパーギア定義、パン）を適切に管理するための`enum`や状態変数を導入する必要がある。
- * - `mousePressed`時、クリックされた場所（例: ペン、ピニオンギア、スパーギアの近く）やアクティブなモードに基づいて、現在アクティブなモード（`currentMode`）を設定し、`View`の対応する`setDefining/setDragging`メソッドや開始点を設定するメソッド（例: `view.setPenDefinitionStartScreenPoint(e_press.getPoint())`）を呼び出す必要がある。
- * - `mouseDragged`時、`currentMode`に応じて、`View`の一時的なオフセット設定メソッド（例: `view.setSpiroGraphDragOffsetWorld()`, `view.setPinionGearDragOffsetWorld()`, `view.setCurrentDragPointScreen()`, `view.setCurrentPenDefinitionDragScreenPoint()`) を呼び出し、`View`を`repaint`させる必要がある。
- * - `mouseReleased`時、`currentMode`に応じて、`View`の定義/ドラッグモードをクリアするメソッドを呼び出し、**Modelの実際のデータ（ギアの位置や半径、ペンの相対位置など）を更新するロジックを実装する必要がある。**
- * - 優先順位（ペン位置定義 ＞ ピニオンギア移動 ＞ スピログラフ(スパーギア)移動 ＞ スパーギア半径定義 ＞ パン）を考慮したマウスイベントのハンドリングロジックを実装する必要がある。
- * - `view.toWorldCoordinates(pressPoint)`のような呼び出しを`view.screenToWorld(pressPoint)`に修正する必要がある。
- * - `model.Point(clickedpoint);`のようなModelへの直接的な`Point`オブジェクトの受け渡しは、Modelの具体的なセッターメソッド（例: `model.setSpurGearPosition()`, `model.setPinionGearPosition()`, `model.getPen().setRelativePosition()`など）に置き換える必要がある。
+ * - `mouseDrag`メソッドは、標準の`MouseMotionListener`インターフェースの`mouseDragged`メソッドに名称を変更する必要がある。
+ * - ViewのインスタンスにController自身をマウスリスナーとして追加する必要がある。
+ * - スパーギア定義モードと**ピニオンギア定義モード**の管理、マウスイベントからの半径計算、Modelへの更新ロジックを追加する必要がある。
+ * - **ピニオンギア定義モードはスパーギア定義モードよりも優先度が高いことを考慮したロジックを実装する必要がある。**
  */
 
 package org.example.view;
@@ -77,8 +57,6 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import org.example.model.Model;
 import java.io.File;
-import java.util.List;
-
 
 public class View extends JPanel {
 
@@ -106,23 +84,13 @@ public class View extends JPanel {
     private Point spurGearCenterScreen = null; // スパーギアの中心点（画面座標）
     private Point currentDragPointScreen = null; // 現在のドラッグ点（画面座標）
 
-    // ピニオンギア移動用の変数
-    private boolean isDraggingPinionGear = false; // ピニオンギアを移動中か
-    private Point2D.Double pinionGearDragOffsetWorld = new Point2D.Double(0, 0); // ピニオンギア移動中の一時的なワールド座標オフセット
-
-    // スピログラフ全体移動用の変数（スパーギアのピッキング＆ドラッグ）
-    private boolean isDraggingSpiroGraph = false; // スピログラフ全体を移動中か
-    private Point2D.Double spiroGraphDragOffsetWorld = new Point2D.Double(0, 0); // スピログラフ移動中の一時的なワールド座標オフセット
-
-    // ペンの位置定義用の変数
-    private boolean isDefiningPen = false; // ペンの位置定義中か
-    private Point penDefinitionStartScreenPoint = null; // ペン定義ドラッグの開始点（画面座標）
-    private Point currentPenDefinitionDragScreenPoint = null; // 現在のドラッグ点（画面座標）
-
+    // ピニオンギアの半径定義用の変数
+    private boolean isDefiningPinionGear = false; // ピニオンギアの半径定義中か
+    private Point pinionGearCenterScreen = null; // ピニオンギアの中心点（画面座標）
+    private Point currentDragPointScreenForPinion = null; // 現在のドラッグ点（ピニオンギア用、画面座標）
 
     public View(Model model) {
         this.model = model;
-        this.model.addView(this); // ViewをModelのObserverとして登録する
 
         // レイアウトマネージャーは要件によって適切なものを選択する（例: BorderLayout, GridLayoutなど）。
         // 現在はnullレイアウトを使用しているが、これはUIの柔軟性を低下させる。
@@ -210,9 +178,6 @@ public class View extends JPanel {
 
         AffineTransform originalTransform = g2d.getTransform();
 
-        // penColor をここで取得し、メソッド全体でアクセス可能にする
-        Color penColor = model.getPenColor();
-
         // ユーザー画面移動（パン）の適用
         // viewOffsetはワールド座標系でのオフセット
         g2d.translate(viewOffset.x, viewOffset.y);
@@ -220,90 +185,30 @@ public class View extends JPanel {
         // スケーリングの適用
         g2d.scale(scale, scale);
 
-        // Modelから現在の要素のベース位置を取得
-        Point2D.Double baseSpurPosition = model.getSpurGearPosition();
-        Point2D.Double basePinionPosition = model.getPinionGearPosition();
-        Point2D.Double basePenPosition = model.getPenPosition();
-
-        // 描画に適用する一時的なオフセット（初期値は0）
-        Point2D.Double effectiveSpurOffset = new Point2D.Double(0, 0);
-        Point2D.Double effectivePinionOffset = new Point2D.Double(0, 0);
-        Point2D.Double effectivePenOffset = new Point2D.Double(0, 0);
-        Point2D.Double effectiveLocusOffset = new Point2D.Double(0, 0);
-
-        // --- 優先順位に応じたオフセットの計算 ---
-        // 優先度1: ペンの位置定義モード (最優先)
-        // ペンの位置定義中は、他の移動オフセットは適用されない（Controllerがモードを排他的に管理するため）。
-        // ただし、もしペンの定義がピニオンギアに「対して」行われる場合、ピニオンギアの現在の位置は考慮する必要がある。
-        // このViewの描画ロジックは、あくまでModelのベース位置と、一時的なオフセットを組み合わせて表示する。
-        // ペンの定義中は、Modelのベース位置ではなく、ドラッグ中の仮のペン位置が表示される。
-
-        // 優先度2: ピニオンギア個別移動モード
-        // ペンの位置定義モードが有効でない場合に限り、ピニオンギアのオフセットを適用する。
-        if (isDraggingPinionGear && !isDefiningPen) {
-            effectivePinionOffset = pinionGearDragOffsetWorld;
-            effectivePenOffset = pinionGearDragOffsetWorld; // ペンはピニオンギアに追従
-        }
-
-        // 優先度3: スピログラフ全体移動モード
-        // ピニオンギア個別移動モード、ペンの位置定義モードが有効でない場合に限り、スピログラフ全体移動のオフセットを適用する。
-        if (isDraggingSpiroGraph && !isDraggingPinionGear && !isDefiningPen) {
-            effectiveSpurOffset = spiroGraphDragOffsetWorld;
-            effectivePinionOffset = spiroGraphDragOffsetWorld;
-            effectivePenOffset = spiroGraphDragOffsetWorld;
-            effectiveLocusOffset = spiroGraphDragOffsetWorld;
-        }
-
-        // 描画用の最終的な位置を計算 (ベース位置 + 一時的なオフセット)
-        Point2D.Double finalSpurPosition = (baseSpurPosition != null) ?
-                new Point2D.Double(baseSpurPosition.x + effectiveSpurOffset.x, baseSpurPosition.y + effectiveSpurOffset.y) : null;
-        Point2D.Double finalPinionPosition = (basePinionPosition != null) ?
-                new Point2D.Double(basePinionPosition.x + effectivePinionOffset.x, basePinionPosition.y + effectivePinionOffset.y) : null;
-        Point2D.Double finalPenPosition = (basePenPosition != null) ?
-                new Point2D.Double(basePenPosition.x + effectivePenOffset.x, basePenPosition.y + effectivePenOffset.y) : null;
-
-
         // スパーギアの描画
-        if (finalSpurPosition != null) {
-            displaySpur(g2d, finalSpurPosition);
+        Point2D.Double spurPosition = model.getSpurGearPosition();
+        if (spurPosition != null) {
+            displaySpur(g2d, spurPosition);
         }
 
         // ピニオンギアの描画
-        if (finalPinionPosition != null) {
-            displayPinion(g2d, finalPinionPosition);
+        Point2D.Double pinionPosition = model.getPinionGearPosition();
+        if (pinionPosition != null) {
+            displayPinion(g2d, pinionPosition);
         }
 
-        // スピログラフの軌跡を描画（オフセットを渡す）
-        displaySpirographLocus(g2d, effectiveLocusOffset);
+        // スピログラフの軌跡を描画
+        displaySpirographLocus(g2d);
 
-        // ペンの位置定義中の仮描画（最優先）
-        if (isDefiningPen && penDefinitionStartScreenPoint != null && currentPenDefinitionDragScreenPoint != null) {
-            Point2D.Double tempPenWorldPosition = screenToWorld(currentPenDefinitionDragScreenPoint);
-
-            // ピニオンギアの中心（現在のドラッグオフセットが適用されたもの）から仮のペン位置まで線を描画
-            // finalPinionPosition は既にスピログラフ全体のドラッグオフセットやピニオンギア個別オフセットが適用されているため、それを利用
-            if (finalPinionPosition != null) {
-                g2d.setColor(Color.LIGHT_GRAY); // 仮の線色
-                g2d.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10.0f, new float[]{5.0f, 5.0f}, 0.0f)); // 破線
-                g2d.drawLine((int) finalPinionPosition.x, (int) finalPinionPosition.y,
-                             (int) tempPenWorldPosition.x, (int) tempPenWorldPosition.y);
-            }
-
-            // 仮のペンを描画
-            g2d.setColor(Color.MAGENTA); // 仮のペン色
-            double penSize = model.getPenSize();
-            g2d.fillOval((int) (tempPenWorldPosition.x - penSize / 2), (int) (tempPenWorldPosition.y - penSize / 2), (int) penSize, (int) penSize);
-
-        } else {
-            // 通常のペンの描画 (現在のペン先の位置)
-            if (finalPenPosition != null) {
-                displayDrawPen(g2d, finalPenPosition, penColor);
-            }
+        // ペンの描画 (現在のペン先の位置)
+        Point2D.Double penPosition = model.getPenPosition();
+        Color penColor = model.getPenColor();
+        if (penPosition != null) {
+            displayDrawPen(g2d, penPosition, penColor);
         }
 
-        // スパーギア定義中の仮描画 (ペンの位置定義モード、ピニオンギア移動モード、スピログラフ全体移動モードより優先度が低い)
-        // isDefiningPen が true の場合は描画しない
-        if (isDefiningSpurGear && spurGearCenterScreen != null && !isDefiningPen) {
+        // スパーギア定義中の仮描画
+        if (isDefiningSpurGear && spurGearCenterScreen != null) {
             Point2D.Double centerWorld = screenToWorld(spurGearCenterScreen);
             double tempRadius = 0;
             if (currentDragPointScreen != null) {
@@ -319,6 +224,24 @@ public class View extends JPanel {
             g2d.drawOval((int) x, (int) y, (int) (tempRadius * 2), (int) (tempRadius * 2));
         }
 
+        // ピニオンギア定義中の仮描画（スパーギアより優先）
+        if (isDefiningPinionGear && pinionGearCenterScreen != null) {
+            Point2D.Double centerWorld = screenToWorld(pinionGearCenterScreen);
+            double tempRadius = 0;
+            if (currentDragPointScreenForPinion != null) {
+                // 画面座標での距離を計算し、ワールド座標での半径に変換
+                tempRadius = pinionGearCenterScreen.distance(currentDragPointScreenForPinion) / scale;
+            }
+
+            g2d.setColor(Color.MAGENTA); // 仮の描画色（ピニオンギア用）
+            g2d.setStroke(new BasicStroke(1.5f));
+            // 円の左上座標を計算（中心座標から半径分を引く）
+            double x = centerWorld.x - tempRadius;
+            double y = centerWorld.y - tempRadius;
+            g2d.drawOval((int) x, (int) y, (int) (tempRadius * 2), (int) (tempRadius * 2));
+        }
+
+
         g2d.setTransform(originalTransform);
 
         // 現在のスケールを表示 (スケールが元に戻された後に描画)
@@ -329,11 +252,11 @@ public class View extends JPanel {
     /**
      * ピニオンギアを描画するメソッド
      *
-     * @param g Graphics2Dオブジェクト
+     * @param g        Graphics2Dオブジェクト
      * @param position ピニオンギアの中心位置 (Modelからの生座標)
      */
     public void displayPinion(Graphics2D g, Point2D.Double position) {
-        Color originalColor = g.getPenColor();
+        Color originalColor = g.getColor();
         java.awt.Stroke originalStroke = g.getStroke();
 
         g.setColor(Color.BLUE);
@@ -357,11 +280,11 @@ public class View extends JPanel {
     /**
      * スパーギアを描画するメソッド
      *
-     * @param g 描画コンテキスト
+     * @param g        描画コンテキスト
      * @param position スパーギアの中心位置 (Modelからの生座標)
      */
     public void displaySpur(Graphics2D g, Point2D.Double position) {
-        Color originalColor = g.getPenColor();
+        Color originalColor = g.getColor();
         java.awt.Stroke originalStroke = g.getStroke();
 
         g.setColor(Color.RED);
@@ -381,12 +304,12 @@ public class View extends JPanel {
     /**
      * ペンポイントを描画するメソッド
      *
-     * @param g 描画コンテキスト
+     * @param g        描画コンテキスト
      * @param position ペンポイントの位置 (Modelからの生座標)
-     * @param color ペンの色
+     * @param color    ペンの色
      */
     public void displayDrawPen(Graphics2D g, Point2D.Double position, Color color) {
-        Color originalColor = g.getPenColor();
+        Color originalColor = g.getColor();
         java.awt.Stroke originalStroke = g.getStroke();
 
         g.setColor(color != null ? color : Color.GREEN);
@@ -405,9 +328,8 @@ public class View extends JPanel {
      * スピログラフの軌跡（Locus）を描画するメソッド
      *
      * @param g2d 描画コンテキスト
-     * @param temporaryOffset スピログラフ移動中の一時的なワールド座標オフセット
      */
-    private void displaySpirographLocus(Graphics2D g2d, Point2D.Double temporaryOffset) {
+    private void displaySpirographLocus(Graphics2D g2d) {
         Color originalColor = g2d.getColor();
         java.awt.Stroke originalStroke = g2d.getStroke();
 
@@ -420,15 +342,14 @@ public class View extends JPanel {
         // public List<Point2D.Double> getLocus() メソッドで提供するよう
         // Modelクラスを変更する必要がある。
         // Modelが現在の実装のままだと、この描画は正しく機能しない。
-        List<Point2D.Double> locus = model.getLocus();
+        java.util.List<Point2D.Double> locus = model.getLocus();
 
         if (locus != null && locus.size() > 1) {
-            // 軌跡の点を線で結んで描画。一時的なオフセットを各点に適用する。
+            // 軌跡の点を線で結んで描画
             for (int i = 0; i < locus.size() - 1; i++) {
                 Point2D.Double p1 = locus.get(i);
                 Point2D.Double p2 = locus.get(i + 1);
-                g2d.drawLine((int) (p1.x + temporaryOffset.x), (int) (p1.y + temporaryOffset.y),
-                             (int) (p2.x + temporaryOffset.x), (int) (p2.y + temporaryOffset.y));
+                g2d.drawLine((int) p1.x, (int) p1.y, (int) p2.x, (int) p2.y);
             }
         }
 
@@ -517,7 +438,6 @@ public class View extends JPanel {
      */
     public Point2D.Double screenToWorld(Point screenPoint) {
         // オフセットとスケールを考慮して変換
-        // 描画オフセットを逆変換し、スケールで割る
         double worldX = (screenPoint.getX() / scale) - (viewOffset.x / scale);
         double worldY = (screenPoint.getY() / scale) - (viewOffset.y / scale);
         return new Point2D.Double(worldX, worldY);
@@ -568,95 +488,48 @@ public class View extends JPanel {
     }
 
     /**
-     * ピニオンギア移動モードを設定する。
-     *
-     * @param dragging trueの場合、移動モードを有効にする。
-     */
-    public void setDraggingPinionGear(boolean dragging) {
-        this.isDraggingPinionGear = dragging;
-        if (!dragging) {
-            this.pinionGearDragOffsetWorld.setLocation(0, 0); // 移動終了時にオフセットをリセット
-        }
-        repaint();
-    }
-
-    /**
-     * ピニオンギア移動中の一時的なワールド座標オフセットを設定する。
-     *
-     * @param offset ワールド座標でのオフセット
-     */
-    public void setPinionGearDragOffsetWorld(Point2D.Double offset) {
-        this.pinionGearDragOffsetWorld = offset;
-        repaint();
-    }
-
-    /**
-     * スピログラフ全体移動モードを設定する。
-     *
-     * @param dragging trueの場合、移動モードを有効にする。
-     */
-    public void setDraggingSpiroGraph(boolean dragging) {
-        this.isDraggingSpiroGraph = dragging;
-        if (!dragging) {
-            this.spiroGraphDragOffsetWorld.setLocation(0, 0); // 移動終了時にオフセットをリセット
-        }
-        repaint(); // 描画を更新
-    }
-
-    /**
-     * スピログラフ移動中の一時的なワールド座標オフセットを設定する。
-     *
-     * @param offset ワールド座標でのオフセット
-     */
-    public void setSpiroGraphDragOffsetWorld(Point2D.Double offset) {
-        this.spiroGraphDragOffsetWorld = offset;
-        repaint(); // 描画を更新
-    }
-
-    /**
-     * ペンの位置定義モードを設定する。
+     * ピニオンギアの半径定義モードを設定する。
      *
      * @param defining trueの場合、定義モードを有効にする。
      */
-    public void setDefiningPen(boolean defining) {
-        this.isDefiningPen = defining;
+    public void setDefiningPinionGear(boolean defining) {
+        this.isDefiningPinionGear = defining;
         if (!defining) {
-            clearPenDefinition(); // 定義モード終了時に状態をクリア
+            clearPinionGearDefinition(); // 定義モード終了時に状態をクリア
         }
         repaint(); // 描画を更新
     }
 
     /**
-     * ペン定義ドラッグの開始点（画面座標）を設定する。
+     * ピニオンギアの中心点（画面座標）を設定する。
      *
-     * @param p 開始点（画面座標）
+     * @param p 中心点（画面座標）
      */
-    public void setPenDefinitionStartScreenPoint(Point p) {
-        this.penDefinitionStartScreenPoint = p;
-        this.currentPenDefinitionDragScreenPoint = p; // ドラッグ開始時は開始点と同じ
+    public void setPinionGearCenterScreen(Point p) {
+        this.pinionGearCenterScreen = p;
+        this.currentDragPointScreenForPinion = p; // ドラッグ開始時は中心点と同じ
         repaint();
     }
 
     /**
-     * ペン定義中の現在のドラッグ点（画面座標）を設定する。
+     * 現在のドラッグ点（ピニオンギア用、画面座標）を設定する。
      *
      * @param p 現在のドラッグ点（画面座標）
      */
-    public void setCurrentPenDefinitionDragScreenPoint(Point p) {
-        this.currentPenDefinitionDragScreenPoint = p;
+    public void setCurrentDragPointScreenForPinion(Point p) {
+        this.currentDragPointScreenForPinion = p;
         repaint();
     }
 
     /**
-     * ペンの位置定義に関する状態をクリアする。
+     * ピニオンギア定義に関する状態をクリアする。
      */
-    public void clearPenDefinition() {
-        this.isDefiningPen = false;
-        this.penDefinitionStartScreenPoint = null;
-        this.currentPenDefinitionDragScreenPoint = null;
+    public void clearPinionGearDefinition() {
+        this.isDefiningPinionGear = false;
+        this.pinionGearCenterScreen = null;
+        this.currentDragPointScreenForPinion = null;
         repaint();
     }
-
 
     /**
      * 現在のViewの描画オフセットを取得する。
