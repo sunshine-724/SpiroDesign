@@ -53,7 +53,7 @@
  * - `mousePressed`時、クリックされた場所（例: ペン、ピニオンギア、スパーギアの近く）やアクティブなモードに基づいて、現在アクティブなモード（`currentMode`）を設定し、`View`の対応する`setDefining/setDragging`メソッドや開始点を設定するメソッド（例: `view.setPenDefinitionStartScreenPoint(e_press.getPoint())`）を呼び出す必要がある。
  * - `mouseDragged`時、`currentMode`に応じて、`View`の一時的なオフセット設定メソッド（例: `view.setSpiroGraphDragOffsetWorld()`, `view.setPinionGearDragOffsetWorld()`, `view.setCurrentDragPointScreen()`, `view.setCurrentPenDefinitionDragScreenPoint()`) を呼び出し、`View`を`repaint`させる必要がある。
  * - `mouseReleased`時、`currentMode`に応じて、`View`の定義/ドラッグモードをクリアするメソッドを呼び出し、**Modelの実際のデータ（ギアの位置や半径、ペンの相対位置など）を更新するロジックを実装する必要がある。**
- * - 優先順位（ペン位置定義 ＞ ピニオンギア移動 ＞ スピログラフ移動 ＞ スパーギア半径定義 ＞ パン）を考慮したマウスイベントのハンドリングロジックを実装する必要がある。
+ * - 優先順位（ペン位置定義 ＞ ピニオンギア移動 ＞ スピログラフ(スパーギア)移動 ＞ スパーギア半径定義 ＞ パン）を考慮したマウスイベントのハンドリングロジックを実装する必要がある。
  * - `view.toWorldCoordinates(pressPoint)`のような呼び出しを`view.screenToWorld(pressPoint)`に修正する必要がある。
  * - `model.Point(clickedpoint);`のようなModelへの直接的な`Point`オブジェクトの受け渡しは、Modelの具体的なセッターメソッド（例: `model.setSpurGearPosition()`, `model.setPinionGearPosition()`, `model.getPen().setRelativePosition()`など）に置き換える必要がある。
  */
@@ -78,6 +78,7 @@ import javax.swing.JTextField;
 import org.example.model.Model;
 import java.io.File;
 import java.util.List;
+
 
 public class View extends JPanel {
 
@@ -121,6 +122,7 @@ public class View extends JPanel {
 
     public View(Model model) {
         this.model = model;
+        this.model.addView(this); // ViewをModelのObserverとして登録する
 
         // レイアウトマネージャーは要件によって適切なものを選択する（例: BorderLayout, GridLayoutなど）。
         // 現在はnullレイアウトを使用しているが、これはUIの柔軟性を低下させる。
@@ -331,7 +333,7 @@ public class View extends JPanel {
      * @param position ピニオンギアの中心位置 (Modelからの生座標)
      */
     public void displayPinion(Graphics2D g, Point2D.Double position) {
-        Color originalColor = g.getColor();
+        Color originalColor = g.getPenColor();
         java.awt.Stroke originalStroke = g.getStroke();
 
         g.setColor(Color.BLUE);
@@ -359,7 +361,7 @@ public class View extends JPanel {
      * @param position スパーギアの中心位置 (Modelからの生座標)
      */
     public void displaySpur(Graphics2D g, Point2D.Double position) {
-        Color originalColor = g.getColor();
+        Color originalColor = g.getPenColor();
         java.awt.Stroke originalStroke = g.getStroke();
 
         g.setColor(Color.RED);
@@ -384,7 +386,7 @@ public class View extends JPanel {
      * @param color ペンの色
      */
     public void displayDrawPen(Graphics2D g, Point2D.Double position, Color color) {
-        Color originalColor = g.getColor();
+        Color originalColor = g.getPenColor();
         java.awt.Stroke originalStroke = g.getStroke();
 
         g.setColor(color != null ? color : Color.GREEN);
