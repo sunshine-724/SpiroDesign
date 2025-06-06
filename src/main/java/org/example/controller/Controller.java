@@ -20,6 +20,12 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     private Point previous = null;
     private Point current = null;
 
+    // マウスリスナーの登録
+    public Controller(View view) {
+        view.addMouseListener(this);
+        view.addMouseMotionListener(this);
+    }
+
     // マウスのコロコロ
     public void mouseWheelMoved(MouseWheelEvent e_wheel) {
         Integer amount = -e_wheel.getWheelRotation();
@@ -28,30 +34,41 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         if(amount == 0) return;
         Point scroll = new Point(0, amount);
         if(isShiftDown) scroll = new Point(amount, 0);
-        
+        view.Point(scroll);
     }
+
+    private Mode currentMode = NONE;
+    private Point pressPoint;
+    private point2D gearCenter;
 
     // マウスクリック
     public void mouseClicked(MouseEvent e_click) {
         Point clickedpoint = e_click.getPoint();
-    }
-    public void mousePressed(MouseEvent e_press) {
-        Point pressedpoint = e_press.getPoint();
-    }
-    public void mouseReleased(MouseEvent e_release) {
-        Point releasedpoint = e_release.getPoint();
+        model.Point(clickedpoint);
     }
 
-    public void mouseDrag(MouseEvent e_drag) {
-    Cursor cursor = Cursor.getPredefinedCursor(13);
-    Component component = (Component)e_drag.getSource();
-    component.setCursor(cursor);
-    this.current = e_drag.getPoint();
-    Integer integer1 = Integer.valueOf(this.current.x - this.previous.x);
-    Integer integer2 = Integer.valueOf(this.current.y - this.previous.y);
-    Point point = new Point(integer1.intValue(), integer2.intValue());
-    scrollBy(point, e_drag);
-    this.previous = this.current;
+    public void mousePressed(MouseEvent e_press) {
+        Point pressedpoint = e_press.getPoint();
+        switch (currentMode) {
+            case SPUR_GEAR:
+            case PINION_GEAR:
+                gearCenter = view.toWorldCoordinates(pressPoint);
+                break;
+            case PAN:
+                break;
+            default: 
+                break;
+        }
+        model.Point(pressedpoint);
     }
+
+    public void mouseReleased(MouseEvent e_release) {
+        Point releasedpoint = e_release.getPoint();
+        model.Point(releasedpoint);
+    }
+
+    /*public void mouseDragged(MouseEvent e_drag) {
+
+    }*/
   
 }
