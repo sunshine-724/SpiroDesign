@@ -7,6 +7,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
+import java.awt.geom.Point2D;
 
 import javax.swing.event.MouseInputAdapter;
 
@@ -15,13 +16,23 @@ import org.example.view.View;
 
 
 public class Controller extends MouseInputAdapter implements MouseWheelListener {
-    protected Model model = null;
-    protected View view = null;
+    protected Model model;
+    protected View view;
     private Point previous = null;
     private Point current = null;
 
+    // 変数の定義
+    public enum Mode {
+        NONE,
+        SPUR_GEAR,
+        PINION_GEAR,
+        PAN
+    }
+
     // マウスリスナーの登録
-    public Controller(View view) {
+    public Controller(View view ,Model model) {
+        this.view = view;
+        this.model = model;
         view.addMouseListener(this);
         view.addMouseMotionListener(this);
     }
@@ -37,28 +48,32 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         view.Point(scroll);
     }
 
-    private Mode currentMode = NONE;
+    private Mode currentMode = Mode.NONE;
     private Point pressPoint;
-    private point2D gearCenter;
+    private Point2D gearCenter;
+
+    public void onSpurGearButtonClicked
 
     // マウスクリック
     public void mouseClicked(MouseEvent e_click) {
         Point clickedpoint = e_click.getPoint();
+        Point2D worldPoint = view.toWorldCoordinates(pressedPoint);
+        boolean inSpur = spurGear.contains(worldPoint);
+        boolean inPinion = pinionGear.contains(worldPoint);
+        boolean onPen = pen.contains(worldPoint);
+        if (inSpur && !inPinion) {
+            currentMode = Mode.SPUR_GEAR;
+        }else if (inPinion && !onPen) {
+            currentMode = Mode.PINION_GEAR;
+        }else if (!inSpur) {
+            currentMode = Mode.PAN;
+        }
+        }
         model.Point(clickedpoint);
     }
 
     public void mousePressed(MouseEvent e_press) {
         Point pressedpoint = e_press.getPoint();
-        switch (currentMode) {
-            case SPUR_GEAR:
-            case PINION_GEAR:
-                gearCenter = view.toWorldCoordinates(pressPoint);
-                break;
-            case PAN:
-                break;
-            default: 
-                break;
-        }
         model.Point(pressedpoint);
     }
 
@@ -72,3 +87,4 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     }*/
   
 }
+
