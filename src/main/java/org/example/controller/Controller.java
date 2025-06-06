@@ -7,6 +7,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
+import java.awt.geom.Point2D;
 
 import javax.swing.event.MouseInputAdapter;
 
@@ -19,6 +20,14 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     protected View view = null;
     private Point previous = null;
     private Point current = null;
+
+    // 変数の定義
+    public enum Mode {
+        NONE,
+        SPUR_GEAR,
+        PINION_GEAR,
+        PAN
+    }
 
     // マウスリスナーの登録
     public Controller(View view) {
@@ -37,14 +46,31 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         view.Point(scroll);
     }
 
-    private Mode currentMode = NONE;
+    private Mode currentMode = Mode.NONE;
     private Point pressPoint;
-    private point2D gearCenter;
+    private Point2D gearCenter;
 
     // マウスクリック
     public void mouseClicked(MouseEvent e_click) {
         Point clickedpoint = e_click.getPoint();
+        switch (currentMode) {
+            case SPUR_GEAR:
+            case PINION_GEAR:
+                Point2D currentWorld = view.toWorldCoordinates(clickedpoint);
+                double radius = gearCenter.distance(currentWorld);
+                // 一時表示のためのプレビュー用のギアを書いてもらうかも
+                view.setPreviewGear(gearCenter, radius, currentMode);
+                break;
+            case PAN:
+                int dx = clickedpoint.x - pressPoint.x;
+                int dy = clickedpoint.y - pressPoint.y;
+                view.pan(dx,dy);
+                pressPoint = clickedpoint;
+                break;
+            default: 
+                break;
         model.Point(clickedpoint);
+        }
     }
 
     public void mousePressed(MouseEvent e_press) {
@@ -52,7 +78,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         switch (currentMode) {
             case SPUR_GEAR:
             case PINION_GEAR:
-                gearCenter = view.toWorldCoordinates(pressPoint);
+                gearCenter = view.toWorldCoordinates(pressedpoint);
                 break;
             case PAN:
                 break;
@@ -64,11 +90,26 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
 
     public void mouseReleased(MouseEvent e_release) {
         Point releasedpoint = e_release.getPoint();
+        switch (currentMode) {
+        case SPUR_GEAR:
+        case PINION_GEAR:
+            Point2D releaseWorld = view.toWorldCoordinates(releasedpoint);
+            double radius = gearCenter.distance(releaseWorld);
+            model.addGear(new Gear(gearCenter, radius, currentMode));
+            view.clearPreview();
+        break;
+        case PAN:
+            break;
+        default:
+            break;
         model.Point(releasedpoint);
+        }
     }
+    currentMode = mode.NONE;
 
     /*public void mouseDragged(MouseEvent e_drag) {
 
     }*/
   
 }
+
