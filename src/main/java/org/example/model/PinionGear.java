@@ -84,7 +84,7 @@ public class PinionGear extends SpiroGear {
      * @param spurRadius   スパーギアの半径
      * @param spurPosition スパーギアの中心位置
      */
-    public void move(int time, Double spurRadius, Point2D.Double spurPosition) {
+    public void move(long time, Double spurRadius, Point2D.Double spurPosition) {
         theta = speed * time;
         double centerX = spurPosition.x + (spurRadius - radius) * Math.cos(-theta);
         double centerY = spurPosition.y + (spurRadius - radius) * Math.sin(-theta);

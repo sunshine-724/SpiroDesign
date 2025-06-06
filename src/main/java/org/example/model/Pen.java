@@ -115,4 +115,8 @@ public class Pen {
     public double getPenSize() {
         return penSize;
     }
+
+    public Color getColor() {
+        return color;
+    }
 }
