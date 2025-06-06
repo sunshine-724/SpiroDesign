@@ -2,6 +2,7 @@ package org.example.spiroIO;
 
 import org.example.model.Model;
 import org.example.model.Pen;
+import org.example.lib.Pair;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -21,11 +22,11 @@ public class SpiroIO {
         }
     }
 
-    public Model loadSpiro(File file) {
+    public Pair<Model, Pen> loadSpiro(File file) {
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
             Model modelData = (Model) in.readObject(); // modelをデシリアライズ化して取得
             Pen penData = (Pen) in.readObject(); // penをデシリアライズ化して取得
-            return new Model(modelData, penData); // 新しいModelオブジェクトを作成して返す
+            return new Pair<Model, Pen>(modelData, penData); // モデルデータとペンデータをペアで返す
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace(); // エラーが発生した場合の処理
             return null; // エラーが発生した場合はnullを返す
