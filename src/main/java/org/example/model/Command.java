@@ -1,6 +1,7 @@
 package org.example.model;
 
 
+
 public enum Command {
     NONE, // コマンドなし
     MOVE_SMALL_CIRCLE, // 内側の円を移動
@@ -21,6 +22,6 @@ public enum Command {
 // 将来的にコマンドパターンを適用する際にも、この列挙型を利用してコマンドの実行や取り消しを管理できます。
 
 interface ICommand {
-    void execute(DrawModel model); // コマンドを実行するメソッド
-    void undo(DrawModel model); // コマンドを取り消すメソッド
+    void execute(Model model); // コマンドを実行するメソッド
+    void undo(Model model); // コマンドを取り消すメソッド
 }
