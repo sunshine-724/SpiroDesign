@@ -9,12 +9,18 @@ import java.util.List;
 
 import javax.swing.Timer;
 
+import org.example.spiroIO.SpiroIO;
+import org.example.view.View;
+import org.example.lib.*;
+
 public class Model {
 
     SpurGear spurGear;
     PinionGear pinionGear;
 
     SpiroIO spiroIO;
+
+    List<View> views = new ArrayList<>(); // Viewのリスト
 
     // Point2D.Double spurGearPosition; //ref only
     // Point2D.Double pinionGearPosition; //ref only
@@ -33,8 +39,6 @@ public class Model {
         pinionGear = new PinionGear();
 
         spiroIO = new SpiroIO();
-
-        pinionGear.setPosition(PINIONGEAR_INIT_POS);
 
         startTime = System.currentTimeMillis();
         pauseTime = 0;
@@ -59,7 +63,7 @@ public class Model {
         long currentTime = System.currentTimeMillis() - startTime;
 
         // ピニオンギアの位置とペンの位置を更新
-        pinionGear.move(currentTime, spurGear.getRadius(), spurGear.getSpurPosition());
+        pinionGear.move(currentTime, spurGear.getSpurRadius(), spurGear.getSpurPosition());
 
         // ペンの位置を取得
         Point2D.Double penPosition = pinionGear.getPen().getPosition();
@@ -71,6 +75,19 @@ public class Model {
 
         // ローカスにペンの位置を追加
         locus.add(absolutePenPosition);
+    }
+
+
+
+    //ファイルを読み込んだ後、viewに
+    private void notifyViewsLoading() {
+        for (View view : views) {
+            view.getLocus(locus);
+        }
+    }
+
+    public void addView(View view) {
+        views.add(view);
     }
 
     public List<Point2D.Double> getLocus() {
@@ -94,11 +111,11 @@ public class Model {
     }
 
     public Double getSpurGearRadius() {
-        return spurGear.getRadius();
+        return spurGear.getSpurRadius();
     }
 
     public Double getPinionGearRadius() {
-        return pinionGear.getRadius();
+        return pinionGear.getPinionRadius();
     }
 
     public Point2D.Double getPinionGearPosition() {
@@ -145,8 +162,13 @@ public class Model {
     public void mouseReleased(Point position) {
     }
 
-    public void pressSaveButton(File file) {
-        loadData(file,this, pinionGear.getPen());
+    // ドラッグすると
+    // ピニオンギアの半径を更新
+    // スパーギアの半径を更新
+    // スパーギアの中心位置を更新
+    // ピニオンギアの中心位置を更新
+    public void mouseDragged(Point position) {
+
     }
 
     public void pressLoadButton(File file) {
@@ -154,26 +176,26 @@ public class Model {
         // ファイルを選択して読み込み
 
         if (file != null) {
-            loadData(file, this, pinionGear.getPen());
+            loadData(file);
         }
     }
 
-    // ドラッグすると
-    // ピニオンギアの半径を更新
-    // スパーギアの半径を更新
-    // スパーギアの中心位置を更新
-    // ピニオンギアの中心位置を更新
-    private void mouseDragged(Point position) {
-
+    public void pressSaveButton(File file, Pen pen) {
+        saveData(file,this,pen);
     }
 
     // 以下まだ未実装
     public void loadData(File file) {
-        Model model = spiroIO.loadSpiro(file);
+        Pair<Model,Pen> pair = spiroIO.loadSpiro(file);
+        if (pair != null) {
+            Model model = pair.first;
+            Pen pen = pair.second;
+
+            List<Point2D.Double> locus = model.locus;
+        }
     }
 
-    public void saveData(File file, Point2D.Double spurPosition, Point2D.Double pinionPosition, Pen pen,
-            List<Point> locus, long time) {
-        spiroIO.saveSpiro(file, spurPosition, pinionPosition, pen, locus, time);
+    public void saveData(File file, Model model,Pen pen) {
+        spiroIO.saveSpiro(file,model,pen);
     }
 }
