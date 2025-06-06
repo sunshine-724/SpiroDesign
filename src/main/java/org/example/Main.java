@@ -13,6 +13,8 @@ public class Main {
         frame.setSize(800, 800);
         frame.setVisible(true);
         
+        // Create the model, view, and controller
+        // and set up the MVC pattern
         Model model = new Model();
         View view = new View(model);
         Controller controller = new Controller(model, view);
