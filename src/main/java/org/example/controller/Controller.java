@@ -16,8 +16,8 @@ import org.example.view.View;
 
 
 public class Controller extends MouseInputAdapter implements MouseWheelListener {
-    protected Model model = null;
-    protected View view = null;
+    protected Model model;
+    protected View view;
     private Point previous = null;
     private Point current = null;
 
@@ -30,7 +30,9 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     }
 
     // マウスリスナーの登録
-    public Controller(View view) {
+    public Controller(View view ,Model model) {
+        this.view = view;
+        this.model = model;
         view.addMouseListener(this);
         view.addMouseMotionListener(this);
     }
@@ -50,62 +52,35 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     private Point pressPoint;
     private Point2D gearCenter;
 
+    public void onSpurGearButtonClicked
+
     // マウスクリック
     public void mouseClicked(MouseEvent e_click) {
         Point clickedpoint = e_click.getPoint();
-        switch (currentMode) {
-            case SPUR_GEAR:
-            case PINION_GEAR:
-                Point2D currentWorld = view.toWorldCoordinates(clickedpoint);
-                double radius = gearCenter.distance(currentWorld);
-                // 一時表示のためのプレビュー用のギアを書いてもらうかも
-                view.setPreviewGear(gearCenter, radius, currentMode);
-                break;
-            case PAN:
-                int dx = clickedpoint.x - pressPoint.x;
-                int dy = clickedpoint.y - pressPoint.y;
-                view.pan(dx,dy);
-                pressPoint = clickedpoint;
-                break;
-            default: 
-                break;
-        model.Point(clickedpoint);
+        Point2D worldPoint = view.toWorldCoordinates(pressedPoint);
+        boolean inSpur = spurGear.contains(worldPoint);
+        boolean inPinion = pinionGear.contains(worldPoint);
+        boolean onPen = pen.contains(worldPoint);
+        if (inSpur && !inPinion) {
+            currentMode = Mode.SPUR_GEAR;
+        }else if (inPinion && !onPen) {
+            currentMode = Mode.PINION_GEAR;
+        }else if (!inSpur) {
+            currentMode = Mode.PAN;
         }
+        }
+        model.Point(clickedpoint);
     }
 
     public void mousePressed(MouseEvent e_press) {
         Point pressedpoint = e_press.getPoint();
-        switch (currentMode) {
-            case SPUR_GEAR:
-            case PINION_GEAR:
-                gearCenter = view.toWorldCoordinates(pressedpoint);
-                break;
-            case PAN:
-                break;
-            default: 
-                break;
-        }
         model.Point(pressedpoint);
     }
 
     public void mouseReleased(MouseEvent e_release) {
         Point releasedpoint = e_release.getPoint();
-        switch (currentMode) {
-        case SPUR_GEAR:
-        case PINION_GEAR:
-            Point2D releaseWorld = view.toWorldCoordinates(releasedpoint);
-            double radius = gearCenter.distance(releaseWorld);
-            model.addGear(new Gear(gearCenter, radius, currentMode));
-            view.clearPreview();
-        break;
-        case PAN:
-            break;
-        default:
-            break;
         model.Point(releasedpoint);
-        }
     }
-    currentMode = mode.NONE;
 
     /*public void mouseDragged(MouseEvent e_drag) {
 
