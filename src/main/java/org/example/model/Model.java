@@ -1,12 +1,13 @@
 package org.example.model;
 
 import java.awt.Color;
+import java.awt.Point;
 import java.awt.geom.*;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.Timer;
-
-
 
 public class Model {
 
@@ -22,10 +23,10 @@ public class Model {
     private long startTime;
     private long pauseTime;
 
+    List<Point2D.Double> locus = new ArrayList<>(); // Locus of the pen
+
     // Constants
     private static final int FRAME_PER_MILLISECOND = 1000 / 60; // 60 FPS
-    private static final Point2D.Double PINIONGEAR_INIT_POS = new Point2D.Double(100, 0);
-
 
     public Model() {
         spurGear = new SpurGear();
@@ -38,8 +39,8 @@ public class Model {
         startTime = System.currentTimeMillis();
         pauseTime = 0;
         timer = new Timer(FRAME_PER_MILLISECOND, e -> {
-			updateData(); // データ更新
-		});
+            updateData(); // データ更新
+        });
     }
 
     public void start() {
@@ -55,11 +56,25 @@ public class Model {
     }
 
     private void updateData() {
-        long currentTime = System.currentTimeMillis();
-        long deltaTime = currentTime - startTime;
+        long currentTime = System.currentTimeMillis() - startTime;
 
-        // Update the position of the pinion gear
-        pinionGear.move((int) deltaTime);
+        // ピニオンギアの位置とペンの位置を更新
+        pinionGear.move(currentTime, spurGear.getRadius(), spurGear.getSpurPosition());
+
+        // ペンの位置を取得
+        Point2D.Double penPosition = pinionGear.getPen().getPosition();
+
+        // ペンの位置が相対座標なので絶対座標に変換
+        Point2D.Double absolutePenPosition = new Point2D.Double(
+                penPosition.x + pinionGear.getPinionPosition().x,
+                penPosition.y + pinionGear.getPinionPosition().y);
+
+        // ローカスにペンの位置を追加
+        locus.add(absolutePenPosition);
+    }
+
+    public List<Point2D.Double> getLocus() {
+        return locus;
     }
 
     public void changeSpeed(Double speed) {
@@ -102,7 +117,7 @@ public class Model {
         return pinionGear.getPen().getColor();
     }
 
-    public double getPenSize(){
+    public double getPenSize() {
         return pinionGear.getPen().getPenSize();
     }
 
@@ -114,15 +129,51 @@ public class Model {
         return System.currentTimeMillis();
     }
 
-    public Point2D.Double getPenPositionAtTime(){
+    public Point2D.Double getPenPositionAtTime() {
         return pinionGear.getPen().getPosition();
     }
 
-    public void loadData(File file) {
-        spiroIO.loadSpiro(file);
+    // クリックすると
+    // ピニオンギアの位置を更新
+    // ペンの座標の位置を更新
+    public void mouseClicked(Point position) {
     }
 
-    public void saveData(File file) {
-        spiroIO.saveSpiro(file);
+    public void mousePressed(Point position) {
+    }
+
+    public void mouseReleased(Point position) {
+    }
+
+    public void pressSaveButton(File file) {
+        loadData(file,this, pinionGear.getPen());
+    }
+
+    public void pressLoadButton(File file) {
+        // 読み込みダイアログを開く
+        // ファイルを選択して読み込み
+
+        if (file != null) {
+            loadData(file, this, pinionGear.getPen());
+        }
+    }
+
+    // ドラッグすると
+    // ピニオンギアの半径を更新
+    // スパーギアの半径を更新
+    // スパーギアの中心位置を更新
+    // ピニオンギアの中心位置を更新
+    private void mouseDragged(Point position) {
+
+    }
+
+    // 以下まだ未実装
+    public void loadData(File file) {
+        Model model = spiroIO.loadSpiro(file);
+    }
+
+    public void saveData(File file, Point2D.Double spurPosition, Point2D.Double pinionPosition, Pen pen,
+            List<Point> locus, long time) {
+        spiroIO.saveSpiro(file, spurPosition, pinionPosition, pen, locus, time);
     }
 }
