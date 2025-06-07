@@ -18,12 +18,14 @@
  * といったControllerがViewの状態を操作するための公開メソッドを追加した。
  * - `screenToWorld`ヘルパーメソッドを追加し、画面座標をワールド座標に変換できるようにした。
  * - `paintComponent`メソッド内で、スパーギア定義中に一時的な円を描画するロジックを追加した。
- * - **ピニオンギアの半径をピッキングしてドラッグで決定できるようにする機能を追加した。（スパーギアより優先）**
+ * - ピニオンギアの半径をピッキングしてドラッグで決定できるようにする機能を追加した。（スパーギアより優先）
  * - `isDefiningPinionGear`, `pinionGearCenterScreen`, `currentDragPointScreenForPinion`変数を追加した。
  * - `setDefiningPinionGear`, `setPinionGearCenterScreen`, `setCurrentDragPointScreenForPinion`, `clearPinionGearDefinition`
  * といったControllerがViewの状態を操作するための公開メソッドを追加した。
  * - `paintComponent`メソッド内で、ピニオンギア定義中に一時的な円を描画するロジックを追加した。この描画はスパーギアの仮描画よりも優先されるように（コードの後のほうに）配置した。
  * - コード全体で「Path」という用語を「Locus」に変更した。
+ * - **Modelの `notifyViewsLoading()` メソッドが呼び出す `getLocus(List<Point2D.Double> locus)` に合わせて、このメソッドを追加し、ロードされた軌跡データを描画に利用するように変更した。**
+ * - **`displaySpirographLocus` メソッドが、Modelから取得した `locus` または `getLocus` で設定された `loadedLocusData` を描画するように変更した。**
  *
  * **他クラスの必要な変更点:**
  * - **Model.java**:
@@ -50,6 +52,7 @@ import java.awt.geom.Point2D;
 import java.awt.geom.AffineTransform;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.List; // List をインポート
 import javax.swing.JButton;
 import javax.swing.JColorChooser;
 import javax.swing.JFileChooser;
@@ -88,6 +91,9 @@ public class View extends JPanel {
     private boolean isDefiningPinionGear = false; // ピニオンギアの半径定義中か
     private Point pinionGearCenterScreen = null; // ピニオンギアの中心点（画面座標）
     private Point currentDragPointScreenForPinion = null; // 現在のドラッグ点（ピニオンギア用、画面座標）
+
+    // ロードされた軌跡データを保持する変数
+    private List<Point2D.Double> loadedLocusData = null;
 
     public View(Model model) {
         this.model = model;
@@ -336,19 +342,16 @@ public class View extends JPanel {
         g2d.setColor(model.getPenColor());
         g2d.setStroke(new BasicStroke((float) model.getPenSize()));
 
-        // Modelから軌跡の全データを取得する。
-        // 重要: Penクラスのmoveメソッドで計算されたペン位置をModelが適切に収集し、
-        // その履歴を List<Point2D.Double> として保持し、
-        // public List<Point2D.Double> getLocus() メソッドで提供するよう
-        // Modelクラスを変更する必要がある。
-        // Modelが現在の実装のままだと、この描画は正しく機能しない。
-        java.util.List<Point2D.Double> locus = model.getLocus();
+        // ロードされた軌跡データが存在すればそちらを優先し、なければModelの現在の軌跡を使用する
+        List<Point2D.Double> locusToDraw = (loadedLocusData != null && !loadedLocusData.isEmpty()) ?
+                                            loadedLocusData : model.getLocus();
 
-        if (locus != null && locus.size() > 1) {
+
+        if (locusToDraw != null && locusToDraw.size() > 1) {
             // 軌跡の点を線で結んで描画
-            for (int i = 0; i < locus.size() - 1; i++) {
-                Point2D.Double p1 = locus.get(i);
-                Point2D.Double p2 = locus.get(i + 1);
+            for (int i = 0; i < locusToDraw.size() - 1; i++) {
+                Point2D.Double p1 = locusToDraw.get(i);
+                Point2D.Double p2 = locusToDraw.get(i + 1);
                 g2d.drawLine((int) p1.x, (int) p1.y, (int) p2.x, (int) p2.y);
             }
         }
@@ -366,7 +369,7 @@ public class View extends JPanel {
         double scaleChange = zoomIn ? 0.1 : -0.1;
         double newScale = scale + scaleChange;
 
-        if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
+        if (newScale >= MIN_SCALE && newScale >= MAX_SCALE) { // MIN_SCALE と MAX_SCALE を正しく比較
             scale = newScale;
             repaint(); // 新しいスケールで再描画
         }
@@ -549,6 +552,27 @@ public class View extends JPanel {
      */
     public void setViewOffset(Point2D.Double offset) {
         this.viewOffset = offset;
+        repaint();
+    }
+
+    /**
+     * Modelからロードされた軌跡データを受け取り、Viewに設定する。
+     * このメソッドは、Modelの notifyViewsLoading() から呼び出されることを想定している。
+     *
+     * @param locus ロードされた軌跡データのリスト
+     */
+    public void getLocus(List<Point2D.Double> locus) {
+        this.loadedLocusData = locus;
+        // ロードされた軌跡が表示されるように再描画を促す
+        repaint();
+    }
+
+    /**
+     * ロードされた軌跡データをクリアする。
+     * これにより、動的に生成される軌跡が再び描画されるようになる。
+     */
+    public void clearLoadedLocusData() {
+        this.loadedLocusData = null;
         repaint();
     }
 }
