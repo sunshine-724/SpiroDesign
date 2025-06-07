@@ -24,8 +24,9 @@
  * といったControllerがViewの状態を操作するための公開メソッドを追加した。
  * - `paintComponent`メソッド内で、ピニオンギア定義中に一時的な円を描画するロジックを追加した。この描画はスパーギアの仮描画よりも優先されるように（コードの後のほうに）配置した。
  * - コード全体で「Path」という用語を「Locus」に変更した。
- * - **Modelの `notifyViewsLoading()` メソッドが呼び出す `getLocus(List<Point2D.Double> locus)` に合わせて、このメソッドを追加し、ロードされた軌跡データを描画に利用するように変更した。**
- * - **`displaySpirographLocus` メソッドが、Modelから取得した `locus` または `getLocus` で設定された `loadedLocusData` を描画するように変更した。**
+ * - Modelの `notifyViewsLoading()` メソッドが呼び出す `getLocus(List<Point2D.Double> locus)` に合わせて、このメソッドを追加し、ロードされた軌跡データを描画に利用するように変更した。
+ * - `displaySpirographLocus` メソッドが、Modelから取得した `locus` または `getLocus` で設定された `loadedLocusData` を描画するように変更した。
+ * - スケール変更の範囲チェックにおける論理エラーを修正した。
  *
  * **他クラスの必要な変更点:**
  * - **Model.java**:
@@ -34,10 +35,17 @@
  * - `public List<Point2D.Double> getLocus()`メソッドを追加する必要がある。
  * - `Pen`クラスの`getPenSize()`メソッドが存在することを前提としている。
  * - **Controller.java**:
- * - `mouseDrag`メソッドは、標準の`MouseMotionListener`インターフェースの`mouseDragged`メソッドに名称を変更する必要がある。
+ * - `mouseDragged`メソッドは、標準の`MouseMotionListener`インターフェースの`mouseDragged`メソッドに名称を変更する必要がある。
  * - ViewのインスタンスにController自身をマウスリスナーとして追加する必要がある。
- * - スパーギア定義モードと**ピニオンギア定義モード**の管理、マウスイベントからの半径計算、Modelへの更新ロジックを追加する必要がある。
- * - **ピニオンギア定義モードはスパーギア定義モードよりも優先度が高いことを考慮したロジックを実装する必要がある。**
+ * - スパーギア定義モードとピニオンギア定義モードの管理、マウスイベントからの半径計算、Modelへの更新ロジックを追加する必要がある。
+ * - ピニオンギア定義モードはスパーギア定義モードよりも優先度が高いことを考慮したロジックを実装する必要がある。
+ * - **マウスイベントの `mousePressed` で、スパーギアまたはピニオンギアの半径定義モード、あるいはパンモードを開始するロジックを実装する。**
+ * - **マウスイベントの `mouseDragged` で、現在のモードに応じて以下のいずれかの処理を行う。**
+ * - **スパーギア半径定義中: Viewの `setSpurGearCenterScreen` と `setCurrentDragPointScreen` を利用して仮描画を更新する。**
+ * - **ピニオンギア半径定義中: Viewの `setPinionGearCenterScreen` と `setCurrentDragPointScreenForPinion` を利用して仮描画を更新する。**
+ * - **パンモード: Viewの `getViewOffset()` を取得し、ドラッグ量に基づいて新しいオフセットを計算し、`setViewOffset()` で設定してViewをパンする。**
+ * - **マウスイベントの `mouseReleased` で、現在のモードを終了し、Modelに最終的な半径や位置を通知するロジックを実装する。**
+ * - **マウスホイールイベント `mouseWheelMoved` で、`scaling` メソッドを呼び出す際に、`shift` キーの押下状態に応じて拡大/縮小を制御する。**
  */
 
 package org.example.view;
@@ -52,7 +60,7 @@ import java.awt.geom.Point2D;
 import java.awt.geom.AffineTransform;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.List; // List をインポート
+import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JColorChooser;
 import javax.swing.JFileChooser;
@@ -369,7 +377,7 @@ public class View extends JPanel {
         double scaleChange = zoomIn ? 0.1 : -0.1;
         double newScale = scale + scaleChange;
 
-        if (newScale >= MIN_SCALE && newScale >= MAX_SCALE) { // MIN_SCALE と MAX_SCALE を正しく比較
+        if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
             scale = newScale;
             repaint(); // 新しいスケールで再描画
         }
