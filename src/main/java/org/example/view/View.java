@@ -24,9 +24,10 @@
  * といったControllerがViewの状態を操作するための公開メソッドを追加した。
  * - `paintComponent`メソッド内で、ピニオンギア定義中に一時的な円を描画するロジックを追加した。この描画はスパーギアの仮描画よりも優先されるように（コードの後のほうに）配置した。
  * - コード全体で「Path」という用語を「Locus」に変更した。
- * - Modelの `notifyViewsLoading()` メソッドが呼び出す `getLocus(List<Point2D.Double> locus)` に合わせて、このメソッドを追加し、ロードされた軌跡データを描画に利用するように変更した。
- * - `displaySpirographLocus` メソッドが、Modelから取得した `locus` または `getLocus` で設定された `loadedLocusData` を描画するように変更した。
  * - スケール変更の範囲チェックにおける論理エラーを修正した。
+ * - **Modelからロードされた軌跡データ、ペンの色、ペンの太さを受け取るために `setLocusData` メソッドを追加した。**
+ * - **`displaySpirographLocus` メソッドが、`loadedLocusData` が設定されている場合は、それに対応するペンの色と太さを使用するように変更した。**
+ * - **`clearLoadedLocusData` メソッドが、ロードされたペンの色と太さもクリアするように変更した。**
  *
  * **他クラスの必要な変更点:**
  * - **Model.java**:
@@ -34,18 +35,19 @@
  * - `updateData()`メソッド内で、現在のペン位置を`locus`リストに追加する処理が必要である。
  * - `public List<Point2D.Double> getLocus()`メソッドを追加する必要がある。
  * - `Pen`クラスの`getPenSize()`メソッドが存在することを前提としている。
+ * - **`loadData()` メソッド内で、ファイルから読み込んだ軌跡データ (`locus`) とペン情報 (`Pen`オブジェクトから色と太さ) を取得し、`View`の`setLocusData(locus, penColor, penSize)`メソッドを呼び出すように変更する必要がある。**
  * - **Controller.java**:
  * - `mouseDragged`メソッドは、標準の`MouseMotionListener`インターフェースの`mouseDragged`メソッドに名称を変更する必要がある。
  * - ViewのインスタンスにController自身をマウスリスナーとして追加する必要がある。
  * - スパーギア定義モードとピニオンギア定義モードの管理、マウスイベントからの半径計算、Modelへの更新ロジックを追加する必要がある。
  * - ピニオンギア定義モードはスパーギア定義モードよりも優先度が高いことを考慮したロジックを実装する必要がある。
- * - **マウスイベントの `mousePressed` で、スパーギアまたはピニオンギアの半径定義モード、あるいはパンモードを開始するロジックを実装する。**
- * - **マウスイベントの `mouseDragged` で、現在のモードに応じて以下のいずれかの処理を行う。**
- * - **スパーギア半径定義中: Viewの `setSpurGearCenterScreen` と `setCurrentDragPointScreen` を利用して仮描画を更新する。**
- * - **ピニオンギア半径定義中: Viewの `setPinionGearCenterScreen` と `setCurrentDragPointScreenForPinion` を利用して仮描画を更新する。**
- * - **パンモード: Viewの `getViewOffset()` を取得し、ドラッグ量に基づいて新しいオフセットを計算し、`setViewOffset()` で設定してViewをパンする。**
- * - **マウスイベントの `mouseReleased` で、現在のモードを終了し、Modelに最終的な半径や位置を通知するロジックを実装する。**
- * - **マウスホイールイベント `mouseWheelMoved` で、`scaling` メソッドを呼び出す際に、`shift` キーの押下状態に応じて拡大/縮小を制御する。**
+ * - マウスイベントの `mousePressed` で、スパーギアまたはピニオンギアの半径定義モード、あるいはパンモードを開始するロジックを実装する。
+ * - マウスイベントの `mouseDragged` で、現在のモードに応じて以下のいずれかの処理を行う。
+ * - スパーギア半径定義中: Viewの `setSpurGearCenterScreen` と `setCurrentDragPointScreen` を利用して仮描画を更新する。
+ * - ピニオンギア半径定義中: Viewの `setPinionGearCenterScreen` と `setCurrentDragPointScreenForPinion` を利用して仮描画を更新する。
+ * - パンモード: Viewの `getViewOffset()` を取得し、ドラッグ量に基づいて新しいオフセットを計算し、`setViewOffset()` で設定してViewをパンする。
+ * - マウスイベントの `mouseReleased` で、現在のモードを終了し、Modelに最終的な半径や位置を通知するロジックを実装する。
+ * - マウスホイールイベント `mouseWheelMoved` で、`scaling` メソッドを呼び出す際に、`shift` キーの押下状態に応じて拡大/縮小を制御する。
  */
 
 package org.example.view;
@@ -102,6 +104,9 @@ public class View extends JPanel {
 
     // ロードされた軌跡データを保持する変数
     private List<Point2D.Double> loadedLocusData = null;
+    // ロードされたペンの色と太さを保持する変数
+    private Color loadedPenColor = null;
+    private double loadedPenSize = -1.0; // 未設定を示す値
 
     public View(Model model) {
         this.model = model;
@@ -347,12 +352,24 @@ public class View extends JPanel {
         Color originalColor = g2d.getColor();
         java.awt.Stroke originalStroke = g2d.getStroke();
 
-        g2d.setColor(model.getPenColor());
-        g2d.setStroke(new BasicStroke((float) model.getPenSize()));
+        List<Point2D.Double> locusToDraw;
+        Color penColorToUse;
+        double penSizeToUse;
 
-        // ロードされた軌跡データが存在すればそちらを優先し、なければModelの現在の軌跡を使用する
-        List<Point2D.Double> locusToDraw = (loadedLocusData != null && !loadedLocusData.isEmpty()) ?
-                                            loadedLocusData : model.getLocus();
+        // ロードされた軌跡データが存在し、ペンの色と太さも有効な場合はそちらを優先
+        if (loadedLocusData != null && !loadedLocusData.isEmpty() && loadedPenColor != null && loadedPenSize != -1.0) {
+            locusToDraw = loadedLocusData;
+            penColorToUse = loadedPenColor;
+            penSizeToUse = loadedPenSize;
+        } else {
+            // ロードされたデータがない場合、Modelの現在の軌跡とペン情報を使用
+            locusToDraw = model.getLocus();
+            penColorToUse = model.getPenColor();
+            penSizeToUse = model.getPenSize();
+        }
+
+        g2d.setColor(penColorToUse);
+        g2d.setStroke(new BasicStroke((float) penSizeToUse));
 
 
         if (locusToDraw != null && locusToDraw.size() > 1) {
@@ -564,23 +581,29 @@ public class View extends JPanel {
     }
 
     /**
-     * Modelからロードされた軌跡データを受け取り、Viewに設定する。
-     * このメソッドは、Modelの notifyViewsLoading() から呼び出されることを想定している。
+     * Modelからロードされた軌跡データ、ペンの色、ペンの太さを受け取り、Viewに設定する。
+     * このデータは、`displaySpirographLocus`メソッドで描画される。
      *
      * @param locus ロードされた軌跡データのリスト
+     * @param penColor ロードされたペンの色
+     * @param penSize ロードされたペンの太さ
      */
-    public void getLocus(List<Point2D.Double> locus) {
+    public void setLocusData(List<Point2D.Double> locus, Color penColor, double penSize) {
         this.loadedLocusData = locus;
+        this.loadedPenColor = penColor;
+        this.loadedPenSize = penSize;
         // ロードされた軌跡が表示されるように再描画を促す
         repaint();
     }
 
     /**
-     * ロードされた軌跡データをクリアする。
+     * ロードされた軌跡データとペンの情報をクリアする。
      * これにより、動的に生成される軌跡が再び描画されるようになる。
      */
     public void clearLoadedLocusData() {
         this.loadedLocusData = null;
+        this.loadedPenColor = null;
+        this.loadedPenSize = -1.0; // 未設定の状態に戻す
         repaint();
     }
 }
