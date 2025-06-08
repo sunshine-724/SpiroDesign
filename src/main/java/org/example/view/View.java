@@ -4,40 +4,30 @@
  * このクラスは、MVC（Model-View-Controller）モデルにおけるViewの役割を担う。
  *
  * **変更点履歴:**
- * - `displayDrawPen`および`displaySpirographPath`（現`displaySpirographLocus`）メソッド内の
- * 重複する変数宣言とメソッド呼び出しを修正し、`model.getPenSize()`を使用するよう変更した。
- * - UIコンポーネント（ボタン）に「Save」と「Load」ボタンを追加した。
- * - スピログラフの軌跡描画メソッド`displaySpirographPath`を`displaySpirographLocus`に名称変更し、
- * Modelから軌跡の全データ（`List<Point2D.Double> locus`）を取得して描画するようロジックを修正した。
- * また、Modelがこのデータを提供するよう変更が必要である旨の重要なコメントを追加した。
- * - ユーザー画面移動（パン）機能のためのマウスリスナーをView内部から削除した。
- * これはControllerがマウスイベントを一元的に処理するためである。
- * - スパーギアの半径をピッキングしてドラッグで決定できるようにするための機能を追加した。
- * - `isDefiningSpurGear`, `spurGearCenterScreen`, `currentDragPointScreen`変数を追加した。
- * - `setDefiningSpurGear`, `setSpurGearCenterScreen`, `setCurrentDragPointScreen`, `clearSpurGearDefinition`
- * といったControllerがViewの状態を操作するための公開メソッドを追加した。
- * - `screenToWorld`ヘルパーメソッドを追加し、画面座標をワールド座標に変換できるようにした。
- * - `paintComponent`メソッド内で、スパーギア定義中に一時的な円を描画するロジックを追加した。
- * - ピニオンギアの半径をピッキングしてドラッグで決定できるようにする機能を追加した。（スパーギアより優先）
- * - `isDefiningPinionGear`, `pinionGearCenterScreen`, `currentDragPointScreenForPinion`変数を追加した。
- * - `setDefiningPinionGear`, `setPinionGearCenterScreen`, `setCurrentDragPointScreenForPinion`, `clearPinionGearDefinition`
- * といったControllerがViewの状態を操作するための公開メソッドを追加した。
- * - `paintComponent`メソッド内で、ピニオンギア定義中に一時的な円を描画するロジックを追加した。この描画はスパーギアの仮描画よりも優先されるように（コードの後のほうに）配置した。
- * - コード全体で「Path」という用語を「Locus」に変更した。
- * - **Modelの `notifyViewsLoading()` メソッドが呼び出す `getLocus(List<Point2D.Double> locus)` に合わせて、このメソッドを追加し、ロードされた軌跡データを描画に利用するように変更した。**
- * - **`displaySpirographLocus` メソッドが、Modelから取得した `locus` または `getLocus` で設定された `loadedLocusData` を描画するように変更した。**
+ * - ロードされた軌跡データとペン情報（色、太さ）を受け取るための `setLocusData` メソッドを追加した。
+ * - `displaySpirographLocus` メソッドでの軌跡描画ロジックを、ロードされたデータとModelの現在のデータで適切に切り替えるように変更した。
+ * - スケール変更の範囲チェックにおける論理エラーを修正した。
+ * - **保存成功時に一時的なメッセージを画面に表示するための `displaySaveSuccessMessage` メソッドと、関連する描画ロジックを追加した。**
  *
  * **他クラスの必要な変更点:**
  * - **Model.java**:
- * - 軌跡（Locus）データを保持する`List<Point2D.Double> locus`フィールドを追加する必要がある。
- * - `updateData()`メソッド内で、現在のペン位置を`locus`リストに追加する処理が必要である。
- * - `public List<Point2D.Double> getLocus()`メソッドを追加する必要がある。
- * - `Pen`クラスの`getPenSize()`メソッドが存在することを前提としている。
+ * - `loadData()` メソッド内で、ファイルから読み込んだ軌跡データ (`locus`) とペン情報 (`Pen`オブジェクトから色と太さ) を取得し、`View`の`setLocusData(locus, penColor, penSize)`メソッドを呼び出す必要がある。
+ * - **`saveData()` メソッドが成功した際に、`View`の`displaySaveSuccessMessage("保存しました！")`のようなメソッドを呼び出す必要がある。**
+ * - `Model`クラスと、`Model`が内部に持つ全てのカスタムクラス（`SpurGear`, `PinionGear`など）は、ファイルへの保存・読み込みのために `java.io.Serializable` インターフェースを実装する必要がある。
+ * - **Pen.java**:
+ * - `Pen`クラスは、ファイルへの保存・読み込みのために `java.io.Serializable` インターフェースを実装する必要がある。
  * - **Controller.java**:
- * - `mouseDrag`メソッドは、標準の`MouseMotionListener`インターフェースの`mouseDragged`メソッドに名称を変更する必要がある。
- * - ViewのインスタンスにController自身をマウスリスナーとして追加する必要がある。
- * - スパーギア定義モードと**ピニオンギア定義モード**の管理、マウスイベントからの半径計算、Modelへの更新ロジックを追加する必要がある。
- * - **ピニオンギア定義モードはスパーギア定義モードよりも優先度が高いことを考慮したロジックを実装する必要がある。**
+ * - ViewのインスタンスにController自身をマウスリスナーとして追加する。
+ * - スパーギア定義モードとピニオンギア定義モードの管理、マウスイベントからの半径計算、Modelへの更新ロジックを追加する。
+ * - ピニオンギア定義モードはスパーギア定義モードよりも優先度が高いことを考慮したロジックを実装する。
+ * - マウスイベントの `mousePressed` で、スパーギアまたはピニオンギアの半径定義モード、あるいはパンモードを開始するロジックを実装する。
+ * - マウスイベントの `mouseDragged` で、現在のモードに応じて以下のいずれかの処理を行う。
+ * - スパーギア半径定義中: Viewの `setSpurGearCenterScreen` と `setCurrentDragPointScreen` を利用して仮描画を更新する。
+ * - ピニオンギア半径定義中: Viewの `setPinionGearCenterScreen` と `setCurrentDragPointScreenForPinion` を利用して仮描画を更新する。
+ * - パンモード: Viewの `getViewOffset()` を取得し、ドラッグ量に基づいて新しいオフセットを計算し、`setViewOffset()` で設定してViewをパンする。
+ * - マウスイベントの `mouseReleased` で、現在のモードを終了し、Modelに最終的な半径や位置を通知するロジックを実装する。
+ * - マウスホイールイベント `mouseWheelMoved` で、`scaling` メソッドを呼び出す際に、`shift` キーの押下状態に応じて拡大/縮小を制御する。
+ * - **`Save`ボタンのアクションリスナー内で、Modelの `saveData()` 呼び出しが成功した場合に、`View`の `displaySaveSuccessMessage()` メソッドを呼び出すようにする。**
  */
 
 package org.example.view;
@@ -52,7 +42,7 @@ import java.awt.geom.Point2D;
 import java.awt.geom.AffineTransform;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.List; // List をインポート
+import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JColorChooser;
 import javax.swing.JFileChooser;
@@ -60,6 +50,10 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import org.example.model.Model;
 import java.io.File;
+import javax.swing.Timer; // Timer をインポート
+import java.awt.Font; // Font をインポート
+import java.awt.FontMetrics; // FontMetrics をインポート
+
 
 public class View extends JPanel {
 
@@ -94,6 +88,14 @@ public class View extends JPanel {
 
     // ロードされた軌跡データを保持する変数
     private List<Point2D.Double> loadedLocusData = null;
+    // ロードされたペンの色と太さを保持する変数
+    private Color loadedPenColor = null;
+    private double loadedPenSize = -1.0; // 未設定を示す値
+
+    // 保存成功メッセージ表示用の変数
+    private String saveMessage = null;
+    private Timer messageTimer;
+    private static final int MESSAGE_DISPLAY_DURATION = 2000; // メッセージ表示期間 (ミリ秒)
 
     public View(Model model) {
         this.model = model;
@@ -157,6 +159,14 @@ public class View extends JPanel {
         colorPalletDisplay.setBounds(10, yOffset, 180, 250);
 
         this.setVisible(true);
+
+        // メッセージ表示タイマーの初期化
+        messageTimer = new Timer(MESSAGE_DISPLAY_DURATION, e -> {
+            saveMessage = null; // メッセージをクリア
+            repaint(); // 再描画を促す
+            messageTimer.stop(); // タイマーを停止
+        });
+        messageTimer.setRepeats(false); // 一度だけ実行
 
         // View内部のマウスイベントリスナーは削除された。
         // ControllerがViewにMouseListenerとMouseMotionListenerを追加し、
@@ -253,6 +263,42 @@ public class View extends JPanel {
         // 現在のスケールを表示 (スケールが元に戻された後に描画)
         g2d.setColor(Color.BLACK);
         g2d.drawString("Scale: " + getScalePercent(), 10, getHeight() - 10);
+
+        // 保存成功メッセージの描画
+        if (saveMessage != null) {
+            drawSaveMessage(g2d);
+        }
+    }
+
+    /**
+     * 保存成功メッセージを描画する。
+     *
+     * @param g2d Graphics2Dオブジェクト
+     */
+    private void drawSaveMessage(Graphics2D g2d) {
+        // フォントと色を設定
+        Font font = new Font("SansSerif", Font.BOLD, 24);
+        g2d.setFont(font);
+        FontMetrics metrics = g2d.getFontMetrics(font);
+        int stringWidth = metrics.stringWidth(saveMessage);
+        int stringHeight = metrics.getHeight();
+
+        // メッセージボックスのパディング
+        int padding = 20;
+        int boxWidth = stringWidth + 2 * padding;
+        int boxHeight = stringHeight + 2 * padding;
+
+        // 画面中央に配置
+        int x = (getWidth() - boxWidth) / 2;
+        int y = (getHeight() - boxHeight) / 2;
+
+        // 半透明の背景ボックス
+        g2d.setColor(new Color(0, 0, 0, 150)); // 黒色で半透明
+        g2d.fillRoundRect(x, y, boxWidth, boxHeight, 20, 20); // 角丸の四角
+
+        // メッセージテキスト
+        g2d.setColor(Color.WHITE); // 白色テキスト
+        g2d.drawString(saveMessage, x + padding, y + padding + metrics.getAscent());
     }
 
     /**
@@ -339,12 +385,24 @@ public class View extends JPanel {
         Color originalColor = g2d.getColor();
         java.awt.Stroke originalStroke = g2d.getStroke();
 
-        g2d.setColor(model.getPenColor());
-        g2d.setStroke(new BasicStroke((float) model.getPenSize()));
+        List<Point2D.Double> locusToDraw;
+        Color penColorToUse;
+        double penSizeToUse;
 
-        // ロードされた軌跡データが存在すればそちらを優先し、なければModelの現在の軌跡を使用する
-        List<Point2D.Double> locusToDraw = (loadedLocusData != null && !loadedLocusData.isEmpty()) ?
-                                            loadedLocusData : model.getLocus();
+        // ロードされた軌跡データとペン情報が存在する場合はそちらを優先
+        if (loadedLocusData != null && !loadedLocusData.isEmpty() && loadedPenColor != null && loadedPenSize != -1.0) {
+            locusToDraw = loadedLocusData;
+            penColorToUse = loadedPenColor;
+            penSizeToUse = loadedPenSize;
+        } else {
+            // ロードされたデータがない場合、Modelの現在の軌跡とペン情報を使用
+            locusToDraw = model.getLocus();
+            penColorToUse = model.getPenColor();
+            penSizeToUse = model.getPenSize();
+        }
+
+        g2d.setColor(penColorToUse);
+        g2d.setStroke(new BasicStroke((float) penSizeToUse));
 
 
         if (locusToDraw != null && locusToDraw.size() > 1) {
@@ -369,7 +427,7 @@ public class View extends JPanel {
         double scaleChange = zoomIn ? 0.1 : -0.1;
         double newScale = scale + scaleChange;
 
-        if (newScale >= MIN_SCALE && newScale >= MAX_SCALE) { // MIN_SCALE と MAX_SCALE を正しく比較
+        if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
             scale = newScale;
             repaint(); // 新しいスケールで再描画
         }
@@ -556,23 +614,44 @@ public class View extends JPanel {
     }
 
     /**
-     * Modelからロードされた軌跡データを受け取り、Viewに設定する。
-     * このメソッドは、Modelの notifyViewsLoading() から呼び出されることを想定している。
+     * Modelからロードされた軌跡データ、ペンの色、ペンの太さを受け取り、Viewに設定する。
+     * このデータは、`displaySpirographLocus`メソッドで描画される。
      *
      * @param locus ロードされた軌跡データのリスト
+     * @param penColor ロードされたペンの色
+     * @param penSize ロードされたペンの太さ
      */
-    public void getLocus(List<Point2D.Double> locus) {
+    public void setLocusData(List<Point2D.Double> locus, Color penColor, double penSize) {
         this.loadedLocusData = locus;
+        this.loadedPenColor = penColor;
+        this.loadedPenSize = penSize;
         // ロードされた軌跡が表示されるように再描画を促す
         repaint();
     }
 
     /**
-     * ロードされた軌跡データをクリアする。
+     * ロードされた軌跡データとペンの情報をクリアする。
      * これにより、動的に生成される軌跡が再び描画されるようになる。
      */
     public void clearLoadedLocusData() {
         this.loadedLocusData = null;
+        this.loadedPenColor = null;
+        this.loadedPenSize = -1.0; // 未設定の状態に戻す
         repaint();
+    }
+
+    /**
+     * 保存成功メッセージを表示する。
+     *
+     * @param message 表示するメッセージ文字列
+     */
+    public void displaySaveSuccessMessage(String message) {
+        this.saveMessage = message;
+        repaint(); // メッセージを表示するために即座に再描画を促す
+        if (messageTimer.isRunning()) {
+            messageTimer.restart(); // 既に実行中の場合、タイマーをリスタート
+        } else {
+            messageTimer.start(); // タイマーを開始
+        }
     }
 }
