@@ -132,9 +132,9 @@ public class Model {
     /**
      * ロード後Viewにデータの更新を通知します。
      */
-    private void notifyViewsLoading() {
+    private void notifyViewsLoading(List<Point2D.Double> locusData, Color penColor, double penSize) {
         for (View view : views) {
-            view.getLocus(locus);
+            view.setLocusData(locusData,penColor, penSize);
         }
     }
 
@@ -169,12 +169,22 @@ public class Model {
 
     /**
      * ピニオンギアの位置を設定します。
-     * 指定されたピニオンギアの位置は、スパーギアの中心位置を基準にした相対座標に変換します。
+     * 指定されたピニオンギアの位置は、スパーギアの中心位置を基準にした相対座標に変換されます。
      * 
      * @param position ピニオンギアの位置(絶対座標)
      */
     public void setPinionGearPosition(Point2D.Double position) {
         pinionGear.setPosition(position);
+    }
+
+    /**
+     * ピニオンギアの位置を取得します。
+     * ピニオンギアの位置は、スパーギアの中心位置を基準にした相対座標から、絶対座標に変換されて返ります。
+     * 
+     * @return ピニオンギアの位置(絶対座標)
+     */
+    public Point2D.Double getPinionGearPosition() {
+        return pinionGear.getPinionPosition();
     }
 
     /**
@@ -194,16 +204,6 @@ public class Model {
      */
     public Double getPinionGearRadius() {
         return pinionGear.getPinionRadius();
-    }
-
-    /**
-     * ピニオンギアの位置を取得します。
-     * ピニオンギアの位置は、スパーギアの中心位置を基準にした相対座標から、絶対座標に変換されて返ります。
-     * 
-     * @return ピニオンギアの位置(絶対座標)
-     */
-    public Point2D.Double getPinionGearPosition() {
-        return pinionGear.getPinionPosition();
     }
 
     /**
@@ -285,7 +285,7 @@ public class Model {
     /**
      * マウスがクリックされた時の処理を行います。
      * このメソッドは、マウスの位置を引数として受け取り、クリックイベントに応じた処理を行います。
-     * 例えば、ピニオンギアの位置を設定したり、スパーギアの半径を変更したりすることができます。
+     * 例えば、ピニオンギアの位置、半径の変更だったり、スパーギアの位置、半径の変更だったりすることができます。
      * 
      * @param position マウスの位置
      */
@@ -294,8 +294,8 @@ public class Model {
 
     /**
      * マウスが押された時の処理を行います。
-     * このメソッドは、マウスの位置を引数として受け取り、押下イベントに応じた処理を行います。
-     * 例えば、ピニオンギアの位置を設定したり、スパーギアの半径を変更したりすることができます。
+     * このメソッドはドラッグイベントの開始時に呼び出されることを想定しており、主にドラッグの開始地点の設定を行います。
+     * 例えば、ピニオンギアの位置、半径の変更だったり、スパーギアの位置、半径の変更だったりすることができます。
      * 
      * @param position マウスの位置
      */
@@ -325,7 +325,7 @@ public class Model {
      * @param position
      */
     public void mouseDragged(Point position) {
-
+        
     }
 
     /**
@@ -380,7 +380,7 @@ public class Model {
                 Color penColor = pen.getColor();
                 double penSize = pen.getPenSize();
 
-                notifyViewsLoading();
+                notifyViewsLoading(locus, penColor, penSize); // Viewにデータの更新を通知
 
                 return true; // 読み込みに成功した場合はtrueを返す
             }else {
