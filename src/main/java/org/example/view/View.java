@@ -8,6 +8,7 @@
  * - `displaySpirographLocus` メソッドでの軌跡描画ロジックを、ロードされたデータとModelの現在のデータで適切に切り替えるように変更した。
  * - スケール変更の範囲チェックにおける論理エラーを修正した。
  * - 保存成功時に一時的なメッセージを画面に表示するための `displaySaveSuccessMessage` メソッドと、関連する描画ロジックを追加した。
+ * - **メニューパネルの表示/非表示を切り替えるための `JToggleButton` と `toggleMenuPanel` メソッドを追加した。**
  *
  * **他クラスの必要な変更点:**
  * - **Model.java**:
@@ -28,6 +29,7 @@
  * - マウスイベントの `mouseReleased` で、現在のモードを終了し、Modelに最終的な半径や位置を通知するロジックを実装する。
  * - マウスホイールイベント `mouseWheelMoved` で、`scaling` メソッドを呼び出す際に、`shift` キーの押下状態に応じて拡大/縮小を制御する。
  * - `Save`ボタンのアクションリスナー内で、Modelの `saveData()` 呼び出しが成功した場合に、`View`の `displaySaveSuccessMessage()` メソッドを呼び出すようにする。
+ * - **Viewに新しく追加された `menuToggleButton` に対するアクションリスナーを登録し、そのイベントハンドラ内で `view.toggleMenuPanel()` を呼び出す必要がある。**
  */
 
 package org.example.view;
@@ -53,6 +55,7 @@ import java.io.File;
 import javax.swing.Timer;
 import java.awt.Font;
 import java.awt.FontMetrics;
+import javax.swing.JToggleButton; // JToggleButton をインポート
 
 
 public class View extends JPanel {
@@ -68,6 +71,9 @@ public class View extends JPanel {
     public Map<String, JButton> penSizeDisplay;
 
     public JColorChooser colorPalletDisplay;
+
+    // メニュー開閉用のトグルボタン
+    public JToggleButton menuToggleButton; // public にして Controller からアクセス可能にする
 
     private double scale = 1.0;
     private static final double MIN_SCALE = 0.5;
@@ -126,7 +132,10 @@ public class View extends JPanel {
 
         this.add(MenuDisplay);
 
-        MenuDisplay.setBounds(10, 10, 200, 600);
+        // MenuDisplay のサイズと位置（左上から）
+        MenuDisplay.setBounds(10, 10, 200, 600); // 仮の値
+
+        // 各UIコンポーネントの配置
         int yOffset = 10;
         for (JButton button : subButton.values()) {
             button.setBounds(10, yOffset, 180, 30);
@@ -139,6 +148,12 @@ public class View extends JPanel {
             yOffset += 35;
         }
         colorPalletDisplay.setBounds(10, yOffset, 180, 250);
+
+
+        // メニュー開閉ボタンの初期化と配置
+        menuToggleButton = new JToggleButton("メニューを隠す"); // 初期は表示状態なので「隠す」
+        menuToggleButton.setBounds(MenuDisplay.getX() + MenuDisplay.getWidth() + 10, MenuDisplay.getY(), 120, 30); // メニューパネルの右横に配置
+        this.add(menuToggleButton); // Viewに追加
 
         this.setVisible(true);
 
@@ -469,5 +484,22 @@ public class View extends JPanel {
         } else {
             messageTimer.start();
         }
+    }
+
+    /**
+     * メニューパネルの表示/非表示を切り替える。
+     * ボタンのテキストも連動して更新する。
+     */
+    public void toggleMenuPanel() {
+        boolean isVisible = MenuDisplay.isVisible();
+        MenuDisplay.setVisible(!isVisible); // 表示状態を反転
+        if (isVisible) {
+            menuToggleButton.setText("メニューを表示");
+        } else {
+            menuToggleButton.setText("メニューを隠す");
+        }
+        // パネルの表示/非表示が切り替わった際にレイアウトを再検証・再描画
+        revalidate();
+        repaint();
     }
 }
