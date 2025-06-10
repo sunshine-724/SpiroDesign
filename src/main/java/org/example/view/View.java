@@ -7,15 +7,14 @@
  * - ロードされた軌跡データとペン情報（色、太さ）を受け取るための `setLocusData` メソッドを追加した。
  * - `displaySpirographLocus` メソッドでの軌跡描画ロジックを、ロードされたデータとModelの現在のデータで適切に切り替えるように変更した。
  * - スケール変更の範囲チェックにおける論理エラーを修正した。
- * - **保存成功時に一時的なメッセージを画面に表示するための `displaySaveSuccessMessage` メソッドと、関連する描画ロジックを追加した。**
+ * - 保存成功時に一時的なメッセージを画面に表示するための `displaySaveSuccessMessage` メソッドと、関連する描画ロジックを追加した。
  *
  * **他クラスの必要な変更点:**
  * - **Model.java**:
- * - `loadData()` メソッド内で、ファイルから読み込んだ軌跡データ (`locus`) とペン情報 (`Pen`オブジェクトから色と太さ) を取得し、`View`の`setLocusData(locus, penColor, penSize)`メソッドを呼び出す必要がある。
- * - **`saveData()` メソッドが成功した際に、`View`の`displaySaveSuccessMessage("保存しました！")`のようなメソッドを呼び出す必要がある。**
- * - `Model`クラスと、`Model`が内部に持つ全てのカスタムクラス（`SpurGear`, `PinionGear`など）は、ファイルへの保存・読み込みのために `java.io.Serializable` インターフェースを実装する必要がある。
- * - **Pen.java**:
- * - `Pen`クラスは、ファイルへの保存・読み込みのために `java.io.Serializable` インターフェースを実装する必要がある。
+ * - `loadData()` メソッド内で、SpiroIOから読み込んだ `Model` と `Pen` のデータを使って、**現在のModelインスタンスの`spurGear`、`pinionGear`、`locus`、および`pinionGear`内の`Pen`の色と太さを更新する**必要がある。
+ * - その後、**`View`の`setLocusData(locus, penColor, penSize)`メソッドを呼び出し、ロードされた軌跡とペン情報をViewに通知する**必要がある。（これにより、以前の`notifyViewsLoading()`は不要となる可能性がある。）
+ * - `saveData()` メソッドが成功した際に、`View`の`displaySaveSuccessMessage("保存しました！")`のようなメソッドを呼び出す必要がある。
+ * - `Model`クラスと、`Model`が内部に持つ全てのカスタムクラス（`SpurGear`, `PinionGear`, `Pen`など）は、ファイルへの保存・読み込みのために `java.io.Serializable` インターフェースを実装する必要がある。
  * - **Controller.java**:
  * - ViewのインスタンスにController自身をマウスリスナーとして追加する。
  * - スパーギア定義モードとピニオンギア定義モードの管理、マウスイベントからの半径計算、Modelへの更新ロジックを追加する。
@@ -27,7 +26,7 @@
  * - パンモード: Viewの `getViewOffset()` を取得し、ドラッグ量に基づいて新しいオフセットを計算し、`setViewOffset()` で設定してViewをパンする。
  * - マウスイベントの `mouseReleased` で、現在のモードを終了し、Modelに最終的な半径や位置を通知するロジックを実装する。
  * - マウスホイールイベント `mouseWheelMoved` で、`scaling` メソッドを呼び出す際に、`shift` キーの押下状態に応じて拡大/縮小を制御する。
- * - **`Save`ボタンのアクションリスナー内で、Modelの `saveData()` 呼び出しが成功した場合に、`View`の `displaySaveSuccessMessage()` メソッドを呼び出すようにする。**
+ * - `Save`ボタンのアクションリスナー内で、Modelの `saveData()` 呼び出しが成功した場合に、`View`の `displaySaveSuccessMessage()` メソッドを呼び出すようにする。
  */
 
 package org.example.view;
