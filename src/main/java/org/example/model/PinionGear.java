@@ -59,6 +59,9 @@ public class PinionGear extends SpiroGear {
      */
     public PinionGear() {
         super(DEFAULT_POSITION, DEFAULT_RADIUS, DEFAULT_COLOR);
+        // Penオブジェクトの生成と初期位置の設定例
+        pen = new Pen();
+        pen.setPosition(new java.awt.geom.Point2D.Double(0, 0));
     }
 
     /**
