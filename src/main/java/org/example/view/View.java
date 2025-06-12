@@ -8,7 +8,8 @@
  * - `displaySpirographLocus` メソッドでの軌跡描画ロジックを、ロードされたデータとModelの現在のデータで適切に切り替えるように変更した。
  * - スケール変更の範囲チェックにおける論理エラーを修正した。
  * - 保存成功時に一時的なメッセージを画面に表示するための `displaySaveSuccessMessage` メソッドと、関連する描画ロジックを追加した。
- * - **メニューパネルの表示/非表示を切り替えるための `JToggleButton` と `toggleMenuPanel` メソッドを追加した。**
+ * - **メニューパネルを右クリックで表示する `JPopupMenu` に移行し、その表示のための `showMenu` メソッドを追加した。**
+ * - **メニュー開閉用の `JToggleButton` と `toggleMenuPanel` メソッドを削除した。**
  *
  * **他クラスの必要な変更点:**
  * - **Model.java**:
@@ -21,6 +22,7 @@
  * - **Controller.java**:
  * - スパーギア定義モードとピニオンギア定義モードの管理、マウスイベントからの半径計算、Modelへの更新ロジックを追加する。
  * - ピニオンギア定義モードはスパーギア定義モードよりも優先度が高いことを考慮したロジックを実装する。
+ * - マウスイベントの `mousePressed` または `mouseReleased` で **右クリックイベント (`MouseEvent.isPopupTrigger()`) を検知し、右クリックされた座標 (`e.getX()`, `e.getY()`) を引数として `View`の `showMenu(int x, int y)` メソッドを呼び出す**必要がある。
  * - マウスイベントの `mousePressed` で、スパーギアまたはピニオンギアの半径定義モード、あるいはパンモードを開始するロジックを実装する。
  * - マウスイベントの `mouseDragged` で、現在のモードに応じて以下のいずれかの処理を行う。
  * - スパーギア半径定義中: Viewの `setSpurGearCenterScreen` と `setCurrentDragPointScreen` を利用して仮描画を更新する。
@@ -29,7 +31,6 @@
  * - マウスイベントの `mouseReleased` で、現在のモードを終了し、Modelに最終的な半径や位置を通知するロジックを実装する。
  * - マウスホイールイベント `mouseWheelMoved` で、`scaling` メソッドを呼び出す際に、`shift` キーの押下状態に応じて拡大/縮小を制御する。
  * - `Save`ボタンのアクションリスナー内で、Modelの `saveData()` 呼び出しが成功した場合に、`View`の `displaySaveSuccessMessage()` メソッドを呼び出すようにする。
- * - **Viewに新しく追加された `menuToggleButton` に対するアクションリスナーを登録し、そのイベントハンドラ内で `view.toggleMenuPanel()` を呼び出す必要がある。**
  */
 
 package org.example.view;
@@ -55,14 +56,15 @@ import java.io.File;
 import javax.swing.Timer;
 import java.awt.Font;
 import java.awt.FontMetrics;
-import javax.swing.JToggleButton; // JToggleButton をインポート
-
+import javax.swing.JPopupMenu; // JPopupMenu をインポート
+import javax.swing.BoxLayout; // BoxLayout をインポート
 
 public class View extends JPanel {
 
     private Model model;
 
-    public JPanel MenuDisplay;
+    // メニューパネルを JPopupMenu に変更
+    public JPopupMenu MenuDisplay;
 
     public Map<String, JButton> subButton;
 
@@ -71,9 +73,6 @@ public class View extends JPanel {
     public Map<String, JButton> penSizeDisplay;
 
     public JColorChooser colorPalletDisplay;
-
-    // メニュー開閉用のトグルボタン
-    public JToggleButton menuToggleButton; // public にして Controller からアクセス可能にする
 
     private double scale = 1.0;
     private static final double MIN_SCALE = 0.5;
@@ -100,11 +99,14 @@ public class View extends JPanel {
     public View(Model model) {
         this.model = model;
 
-        this.setLayout(null);
+        this.setLayout(null); // View 自体は絶対配置のまま
         this.setBackground(Color.WHITE);
 
-        this.MenuDisplay = new JPanel();
-        MenuDisplay.setLayout(null);
+        // MenuDisplay を JPopupMenu として初期化
+        this.MenuDisplay = new JPopupMenu();
+        // JPopupMenu 内のコンポーネント配置のために JPanel を追加し、BoxLayout を使用
+        JPanel menuContentPanel = new JPanel();
+        menuContentPanel.setLayout(new BoxLayout(menuContentPanel, BoxLayout.Y_AXIS)); // 縦方向にコンポーネントを並べる
 
         this.subButton = new HashMap<>();
         this.penSizeDisplay = new HashMap<>();
@@ -113,49 +115,30 @@ public class View extends JPanel {
         for (String name : buttonNames) {
             JButton button = new JButton(name);
             subButton.put(name, button);
-            MenuDisplay.add(button);
+            menuContentPanel.add(button); // メニューコンテントパネルに追加
         }
 
         String[] penSizes = { "Small", "Medium", "Large" };
         for (String size : penSizes) {
             JButton button = new JButton(size);
             penSizeDisplay.put(size, button);
-            MenuDisplay.add(button);
+            menuContentPanel.add(button); // メニューコンテントパネルに追加
         }
 
         this.speedDisplay = new JTextField("0.0");
         speedDisplay.setEditable(true);
-        MenuDisplay.add(speedDisplay);
+        menuContentPanel.add(speedDisplay); // メニューコンテントパネルに追加
 
         this.colorPalletDisplay = new JColorChooser();
-        MenuDisplay.add(colorPalletDisplay);
+        menuContentPanel.add(colorPalletDisplay); // メニューコンテントパネルに追加
 
-        this.add(MenuDisplay);
+        // MenuDisplay (JPopupMenu) にメニューコンテントパネルを追加
+        MenuDisplay.add(menuContentPanel);
 
-        // MenuDisplay のサイズと位置（左上から）
-        MenuDisplay.setBounds(10, 10, 200, 600); // 仮の値
+        // JPopupMenu は setBounds ではなく pack() でサイズを調整することが推奨される
+        // また、表示位置は show() メソッドで指定するため、コンストラクタでは設定しない
 
-        // 各UIコンポーネントの配置
-        int yOffset = 10;
-        for (JButton button : subButton.values()) {
-            button.setBounds(10, yOffset, 180, 30);
-            yOffset += 35;
-        }
-        speedDisplay.setBounds(10, yOffset, 180, 30);
-        yOffset += 35;
-        for (JButton button : penSizeDisplay.values()) {
-            button.setBounds(10, yOffset, 180, 30);
-            yOffset += 35;
-        }
-        colorPalletDisplay.setBounds(10, yOffset, 180, 250);
-
-
-        // メニュー開閉ボタンの初期化と配置
-        menuToggleButton = new JToggleButton("メニューを隠す"); // 初期は表示状態なので「隠す」
-        menuToggleButton.setBounds(MenuDisplay.getX() + MenuDisplay.getWidth() + 10, MenuDisplay.getY(), 120, 30); // メニューパネルの右横に配置
-        this.add(menuToggleButton); // Viewに追加
-
-        this.setVisible(true);
+        this.setVisible(true); // View コンポーネント自体は常に可視
 
         messageTimer = new Timer(MESSAGE_DISPLAY_DURATION, e -> {
             saveMessage = null;
@@ -487,19 +470,13 @@ public class View extends JPanel {
     }
 
     /**
-     * メニューパネルの表示/非表示を切り替える。
-     * ボタンのテキストも連動して更新する。
+     * 指定された座標にメニューパネル（JPopupMenu）を表示する。
+     *
+     * @param x 表示するX座標（画面座標）
+     * @param y 表示するY座標（画面座標）
      */
-    public void toggleMenuPanel() {
-        boolean isVisible = MenuDisplay.isVisible();
-        MenuDisplay.setVisible(!isVisible); // 表示状態を反転
-        if (isVisible) {
-            menuToggleButton.setText("メニューを表示");
-        } else {
-            menuToggleButton.setText("メニューを隠す");
-        }
-        // パネルの表示/非表示が切り替わった際にレイアウトを再検証・再描画
-        revalidate();
-        repaint();
+    public void showMenu(int x, int y) {
+        // メニューパネル（JPopupMenu）を表示する
+        MenuDisplay.show(this, x, y);
     }
 }
