@@ -2,35 +2,15 @@
  * View.java - スピログラフ描画アプリケーションのViewコンポーネント
  *
  * このクラスは、MVC（Model-View-Controller）モデルにおけるViewの役割を担う。
+ * 画面への描画、ユーザーインターフェース要素の管理、およびModelからのデータ更新の受け取りを行う。
  *
- * **変更点履歴:**
+ * 変更点履歴:
  * - ロードされた軌跡データとペン情報（色、太さ）を受け取るための `setLocusData` メソッドを追加した。
  * - `displaySpirographLocus` メソッドでの軌跡描画ロジックを、ロードされたデータとModelの現在のデータで適切に切り替えるように変更した。
  * - スケール変更の範囲チェックにおける論理エラーを修正した。
  * - 保存成功時に一時的なメッセージを画面に表示するための `displaySaveSuccessMessage` メソッドと、関連する描画ロジックを追加した。
- * - **メニューパネルを右クリックで表示する `JPopupMenu` に移行し、その表示のための `showMenu` メソッドを追加した。**
- * - **メニュー開閉用の `JToggleButton` と `toggleMenuPanel` メソッドを削除した。**
- *
- * **他クラスの必要な変更点:**
- * - **Model.java**:
- * - `loadData()` メソッド内で、SpiroIOから読み込んだ `Model` と `Pen` のデータを使って、**現在のModelインスタンスの`spurGear`、`pinionGear`、`locus`、および`pinionGear`内の`Pen`の色と太さを更新する**必要がある。
- * - その後、**`View`の`setLocusData(locus, penColor, penSize)`メソッドを呼び出し、ロードされた軌跡とペン情報をViewに通知する**必要がある。
- * - `saveData()` メソッドが成功した際に、`View`の`displaySaveSuccessMessage("保存しました！")`のようなメソッドを呼び出す必要がある。
- * - **Modelクラス、Penクラス、SpurGearクラス、PinionGearクラス、SpiroGearクラス、およびこれらのクラスが内部に持つ全てのカスタムクラス（例: Point2D.Double、Pairなど）は、ファイルへの保存・読み込みのために `java.io.Serializable` インターフェースを実装する必要がある。**
- * - **PinionGear.java**:
- * - **デフォルトコンストラクタで、Penオブジェクトを適切に初期化する必要がある。（例: `this.pen = new Pen();`）**
- * - **Controller.java**:
- * - スパーギア定義モードとピニオンギア定義モードの管理、マウスイベントからの半径計算、Modelへの更新ロジックを追加する。
- * - ピニオンギア定義モードはスパーギア定義モードよりも優先度が高いことを考慮したロジックを実装する。
- * - マウスイベントの `mousePressed` または `mouseReleased` で **右クリックイベント (`MouseEvent.isPopupTrigger()`) を検知し、右クリックされた座標 (`e.getX()`, `e.getY()`) を引数として `View`の `showMenu(int x, int y)` メソッドを呼び出す**必要がある。
- * - マウスイベントの `mousePressed` で、スパーギアまたはピニオンギアの半径定義モード、あるいはパンモードを開始するロジックを実装する。
- * - マウスイベントの `mouseDragged` で、現在のモードに応じて以下のいずれかの処理を行う。
- * - スパーギア半径定義中: Viewの `setSpurGearCenterScreen` と `setCurrentDragPointScreen` を利用して仮描画を更新する。
- * - ピニオンギア半径定義中: Viewの `setPinionGearCenterScreen` と `setCurrentDragPointScreenForPinion` を利用して仮描画を更新する。
- * - パンモード: Viewの `getViewOffset()` を取得し、ドラッグ量に基づいて新しいオフセットを計算し、`setViewOffset()` で設定してViewをパンする。
- * - マウスイベントの `mouseReleased` で、現在のモードを終了し、Modelに最終的な半径や位置を通知するロジックを実装する。
- * - マウスホイールイベント `mouseWheelMoved` で、`scaling` メソッドを呼び出す際に、`shift` キーの押下状態に応じて拡大/縮小を制御する。
- * - `Save`ボタンのアクションリスナー内で、Modelの `saveData()` 呼び出しが成功した場合に、`View`の `displaySaveSuccessMessage()` メソッドを呼び出すようにする。
+ * - メニューパネルを右クリックで表示する `JPopupMenu` に移行し、その表示のための `showMenu` メソッドを追加した。
+ * - メニュー開閉用の `JToggleButton` と `toggleMenuPanel` メソッドを削除した。
  */
 
 package org.example.view;
@@ -56,22 +36,17 @@ import java.io.File;
 import javax.swing.Timer;
 import java.awt.Font;
 import java.awt.FontMetrics;
-import javax.swing.JPopupMenu; // JPopupMenu をインポート
-import javax.swing.BoxLayout; // BoxLayout をインポート
+import javax.swing.JPopupMenu;
+import javax.swing.BoxLayout;
 
 public class View extends JPanel {
 
     private Model model;
 
-    // メニューパネルを JPopupMenu に変更
     public JPopupMenu MenuDisplay;
-
     public Map<String, JButton> subButton;
-
     public JTextField speedDisplay;
-
     public Map<String, JButton> penSizeDisplay;
-
     public JColorChooser colorPalletDisplay;
 
     private double scale = 1.0;
@@ -99,46 +74,40 @@ public class View extends JPanel {
     public View(Model model) {
         this.model = model;
 
-        this.setLayout(null); // View 自体は絶対配置のまま
-        this.setBackground(Color.WHITE);
+        setLayout(null);
+        setBackground(Color.WHITE);
 
-        // MenuDisplay を JPopupMenu として初期化
-        this.MenuDisplay = new JPopupMenu();
-        // JPopupMenu 内のコンポーネント配置のために JPanel を追加し、BoxLayout を使用
+        MenuDisplay = new JPopupMenu();
         JPanel menuContentPanel = new JPanel();
-        menuContentPanel.setLayout(new BoxLayout(menuContentPanel, BoxLayout.Y_AXIS)); // 縦方向にコンポーネントを並べる
+        menuContentPanel.setLayout(new BoxLayout(menuContentPanel, BoxLayout.Y_AXIS));
 
-        this.subButton = new HashMap<>();
-        this.penSizeDisplay = new HashMap<>();
+        subButton = new HashMap<>();
+        penSizeDisplay = new HashMap<>();
 
         String[] buttonNames = { "Pen", "SpurGear", "PinionGear", "Start", "Stop", "Clear", "Save", "Load" };
         for (String name : buttonNames) {
             JButton button = new JButton(name);
             subButton.put(name, button);
-            menuContentPanel.add(button); // メニューコンテントパネルに追加
+            menuContentPanel.add(button);
         }
 
         String[] penSizes = { "Small", "Medium", "Large" };
         for (String size : penSizes) {
             JButton button = new JButton(size);
             penSizeDisplay.put(size, button);
-            menuContentPanel.add(button); // メニューコンテントパネルに追加
+            menuContentPanel.add(button);
         }
 
-        this.speedDisplay = new JTextField("0.0");
+        speedDisplay = new JTextField("0.0");
         speedDisplay.setEditable(true);
-        menuContentPanel.add(speedDisplay); // メニューコンテントパネルに追加
+        menuContentPanel.add(speedDisplay);
 
-        this.colorPalletDisplay = new JColorChooser();
-        menuContentPanel.add(colorPalletDisplay); // メニューコンテントパネルに追加
+        colorPalletDisplay = new JColorChooser();
+        menuContentPanel.add(colorPalletDisplay);
 
-        // MenuDisplay (JPopupMenu) にメニューコンテントパネルを追加
         MenuDisplay.add(menuContentPanel);
 
-        // JPopupMenu は setBounds ではなく pack() でサイズを調整することが推奨される
-        // また、表示位置は show() メソッドで指定するため、コンストラクタでは設定しない
-
-        this.setVisible(true); // View コンポーネント自体は常に可視
+        setVisible(true);
 
         messageTimer = new Timer(MESSAGE_DISPLAY_DURATION, e -> {
             saveMessage = null;
@@ -165,7 +134,6 @@ public class View extends JPanel {
         AffineTransform originalTransform = g2d.getTransform();
 
         g2d.translate(viewOffset.x, viewOffset.y);
-
         g2d.scale(scale, scale);
 
         Point2D.Double spurPosition = model.getSpurGearPosition();
@@ -186,6 +154,7 @@ public class View extends JPanel {
             displayDrawPen(g2d, penPosition, penColor);
         }
 
+        // スパーギア定義中の仮描画
         if (isDefiningSpurGear && spurGearCenterScreen != null) {
             Point2D.Double centerWorld = screenToWorld(spurGearCenterScreen);
             double tempRadius = 0;
@@ -200,6 +169,7 @@ public class View extends JPanel {
             g2d.drawOval((int) x, (int) y, (int) (tempRadius * 2), (int) (tempRadius * 2));
         }
 
+        // ピニオンギア定義中の仮描画
         if (isDefiningPinionGear && pinionGearCenterScreen != null) {
             Point2D.Double centerWorld = screenToWorld(pinionGearCenterScreen);
             double tempRadius = 0;
@@ -292,7 +262,6 @@ public class View extends JPanel {
         g.setColor(color != null ? color : Color.GREEN);
         double penSize = model.getPenSize();
         g.setStroke(new BasicStroke((float) penSize));
-
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         g.fillOval((int) (position.x - penSize / 2), (int) (position.y - penSize / 2), (int) penSize, (int) penSize);
@@ -321,7 +290,6 @@ public class View extends JPanel {
 
         g2d.setColor(penColorToUse);
         g2d.setStroke(new BasicStroke((float) penSizeToUse));
-
 
         if (locusToDraw != null && locusToDraw.size() > 1) {
             for (int i = 0; i < locusToDraw.size() - 1; i++) {
@@ -469,14 +437,7 @@ public class View extends JPanel {
         }
     }
 
-    /**
-     * 指定された座標にメニューパネル（JPopupMenu）を表示する。
-     *
-     * @param x 表示するX座標（画面座標）
-     * @param y 表示するY座標（画面座標）
-     */
     public void showMenu(int x, int y) {
-        // メニューパネル（JPopupMenu）を表示する
         MenuDisplay.show(this, x, y);
     }
 }
