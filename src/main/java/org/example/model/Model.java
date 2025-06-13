@@ -237,6 +237,27 @@ public class Model {
     }
 
     /**
+     * スパーギアとピニオンギアを指定された座標に移動します。
+     * このメソッドは、スパーギアとピニオンギアの位置を指定された座標に移動させます。
+     * ピニオンギアの位置は、スパーギアの中心位置を基準にした相対座標で更新されます。
+     * ペンの位置もピニオンギアが移動すると同時に更新されます。
+     * @param dx 移動量のX座標
+     * @param dy 移動量のY座標
+     */
+
+    public void moveSpurGearBy(int dx, int dy) {
+        spurGear.setPosition(new Point2D.Double(spurGear.getSpurPosition().x + dx,
+                spurGear.getSpurPosition().y + dy));
+
+        pinionGear.setPosition(new Point2D.Double(pinionGear.getPinionPosition().x + dx,
+                pinionGear.getPinionPosition().y + dy));
+    }
+
+    public void setSpurRadius(double radius) {
+        spurGear.changeRadius(radius);
+    }
+
+    /**
      * ピニオンギアのペンの位置を取得します。
      * ペンの位置は、ピニオンギアの中心位置を基準にした相対座標から絶対座標に変換されて返されます。
      * 
