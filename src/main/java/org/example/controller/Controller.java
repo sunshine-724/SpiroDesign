@@ -14,10 +14,16 @@ import javax.swing.event.MouseInputAdapter;
 import org.example.model.Model;
 import org.example.view.View;
 
-
 public class Controller extends MouseInputAdapter implements MouseWheelListener {
     protected Model model;
     protected View view;
+    /*
+     * private Gear spurGear;
+     * private Gear pinionGear;
+     * private Pen pen;
+     */
+    private Point previous = null;
+    private Point current = null;
 
     // 変数の定義
     private enum DraggingMode {
@@ -26,10 +32,11 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         RESIZE_RADIUS,
         PAN
     }
+
     private DraggingMode draggingMode = DraggingMode.NONE;
 
     // マウスリスナーの登録
-    public Controller(View view ,Model model) {
+    public Controller(View view, Model model) {
         this.view = view;
         this.model = model;
         view.addMouseListener(this);
@@ -41,10 +48,12 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         Integer amount = -e_wheel.getWheelRotation();
         int modifiers = e_wheel.getModifiersEx();
         boolean isShiftDown = (modifiers & MouseEvent.SHIFT_DOWN_MASK) != 0;
-        if(amount == 0) return;
+        if (amount == 0)
+            return;
         Point scroll = new Point(0, amount);
-        if(isShiftDown) scroll = new Point(amount, 0);
-        view.scaling(isShiftDown); //エラーは消えたけど多分違う
+        if (isShiftDown)
+            scroll = new Point(amount, 0);
+        view.scaling(isShiftDown); // エラーは消えたけど多分違う
     }
 
     private Point pressPoint;
@@ -57,19 +66,21 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
 
     public void mousePressed(MouseEvent e_press) {
         Point pressedPoint = e_press.getPoint();
-        pressPoint = pressedPoint;
-
-    // ギア中心までの距離を計算
-    double distance = pressedPoint.distance(model.getSpurGearPosition());
-
-    if (distance < 10) {
-        draggingMode = DraggingMode.MOVE_CENTER;
-    } else if (Math.abs(distance - model.getSpurGearRadius()) < 10) {
-        draggingMode = DraggingMode.RESIZE_RADIUS;
-    } else {
-        draggingMode = DraggingMode.PAN;
-    }
-
+        /*
+         * Point2D worldPoint = view.toWorldCoordinates(pressedPoint);
+         * boolean inSpur = spurGear.contains(worldPoint);
+         * boolean inPinion = pinionGear.contains(worldPoint);
+         * boolean onPen = pen.contains(worldPoint);
+         * if (inSpur && !inPinion) {
+         * currentMode = Mode.SPUR_GEAR;
+         * }else if (inPinion && !onPen) {
+         * currentMode = Mode.PINION_GEAR;
+         * }else if (!inSpur) {
+         * currentMode = Mode.PAN;
+         * }else {
+         * currentMode = Mode.NONE;
+         * }
+         */
         model.mousePressed(pressedPoint);
     }
 
@@ -80,83 +91,33 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
 
     public void mouseDragged(MouseEvent e_drag) {
         Point currentPoint = e_drag.getPoint();
-
-        switch (draggingMode) {
-            case MOVE_CENTER:
-                int dx = currentPoint.x - pressPoint.x;
-                int dy = currentPoint.y - pressPoint.y;
-
-                model.moveSpurGearBy(dx, dy);
-                pressPoint = currentPoint;
-                view.repaint();
-                break;
-
-            case RESIZE_RADIUS:
-                double newRadius = currentPoint.distance(model.getSpurGearPosition());
-                model.setSpurRadius(newRadius);
-                view.repaint();
-                break;
-
-            case PAN:
-                int panDx = currentPoint.x - pressPoint.x;
-                int panDy = currentPoint.y - pressPoint.y;
-                view.pan(panDx, panDy);
-                pressPoint = currentPoint;
-                break;
-
-            default:
-                model.mouseDragged(currentPoint);
-                break;
-        }
+        /*
+         * Point2D currentWorld = view.toWorldCoordinates(currentPoint);
+         * switch (currentMode) {
+         * case SPUR_GEAR:
+         * spurGear.moveTo(currentWorld);
+         * view.repaint();
+         * break;
+         * case PINION_GEAR:
+         * pinionGear.moveTo(currentWorld);
+         * view.repaint();
+         * break;
+         * case PAN:
+         * int dx = currentPoint.x - pressedPoint.x;
+         * int dy = currentPoint.y - pressedPoint.y;
+         * view.pan(dx, dy);
+         * pressedPoint = currentPoint;
+         * break;
+         * }
+         */
         model.mouseDragged(currentPoint);
     }
+
+    /*
+     * public boolean contains(Point2D p) {
+     * double distance = center.distance(p);
+     * return distance <= radius;
+     * }
+     */
+
 }
-
-    /*public void mouseMoved(MouseEvent e_cursor) {
-        Point p = e_cursor.getPoint();
-        double d = p.distance(model.getSpurGearPosition());
-        if (d < 10) {
-            view.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-        } else if (Math.abs(d - model.getSpurGearRadius()) < 10) {
-            view.setCursor(Cursor.getPredefinedCursor(Cursor.SE_RESIZE_CURSOR));
-        } else {
-            view.setCursor(Cursor.getDefaultCursor());
-        }
-    }*/
-
-
-
-// modelに欲しいかもしれないもの
-/*public void moveSpurGearBy(int dx, int dy) {
-    spurPosition.setLocation(spurPosition.getX() + dx, spurPosition.getY() + dy);
-    
-    // ピニオンやペンも相対移動
-    pinionPosition.setLocation(pinionPosition.getX() + dx, pinionPosition.getY() + dy);
-    penPosition.setLocation(penPosition.getX() + dx, penPosition.getY() + dy);
-}
-
-public void setSpurRadius(double newRadius) {
-    spurRadius = newRadius;
-}
- */
-
-
- //viewに欲しいかもしれないもの
- /*private int offsetX = 0;
-private int offsetY = 0;
-
-public void pan(int dx, int dy) {
-    offsetX += dx;
-    offsetY += dy;
-    repaint();
-}
-
-public Point2D toWorldCoordinates(Point screenPoint) {
-    return new Point2D.Double(screenPoint.x - offsetX, screenPoint.y - offsetY);
-}
-
-public Point toScreenCoordinates(Point2D worldPoint) {
-    return new Point((int)(worldPoint.getX() + offsetX), (int)(worldPoint.getY() + offsetY));
-}
-
- */
