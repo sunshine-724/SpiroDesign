@@ -93,11 +93,17 @@ public class PinionGear extends SpiroGear {
         double centerY = spurPosition.y + (spurRadius - radius) * Math.sin(-theta);
 
         this.position.setLocation(centerX, centerY);
-        pen.move(this.position, this.radius, this.theta, this.alpha);
+        pen.setPenPosition(this.position, this.radius, this.theta, this.alpha);
     }
 
+    /**
+     * ピニオンギアの位置を設定する。
+     * 
+     * @param position 新しい位置
+     */
     public void setPosition(Point2D.Double position) {
         this.position = position;
+        pen.setPenPosition(this.position, this.radius, this.theta, this.alpha);
     }
 
     /**
