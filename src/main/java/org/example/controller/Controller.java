@@ -52,6 +52,15 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     // マウスクリック
     public void mouseClicked(MouseEvent e_click) {
         Point clickedpoint = e_click.getPoint();
+        Point2D worldClicked = view.screenToWorld(clickedpoint);
+        Point2D pinionCenter = model.getPinionGearPosition();
+        double distance = worldClicked.distance(pinionCenter);
+        double radius = model.getPinionGearRadius();
+        if (distance <= radius) {
+        model.setPenPosition(worldClicked);
+        view.repaint();
+        return;
+    }
         model.mouseClicked(clickedpoint);
     }
 
