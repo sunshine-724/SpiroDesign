@@ -96,6 +96,11 @@ public class PinionGear extends SpiroGear {
         pen.move(this.position, this.radius, this.theta, this.alpha);
     }
 
+    /**
+     * ピニオンギアの位置を設定する。
+     * 
+     * @param position 新しい位置
+     */
     public void setPosition(Point2D.Double position) {
         this.position = position;
     }

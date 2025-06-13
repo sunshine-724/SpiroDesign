@@ -61,4 +61,13 @@ public class SpurGear extends SpiroGear {
     public Point2D.Double getSpurPosition() {
         return position;
     }
+
+    /**
+     * スパーギアの位置を設定するメソッド。
+     * 
+     * @param position 新しい位置
+     */
+    public void setPosition(Point2D.Double position) {
+        this.position = position;
+    }
 }
