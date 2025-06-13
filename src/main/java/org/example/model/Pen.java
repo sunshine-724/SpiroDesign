@@ -65,7 +65,7 @@ public class Pen {
      * @param theta          ピニオンギアの角度
      * @param alpha          ピニオンギアの角加速度
      */
-    public void move(Point2D.Double pinionPosition, Double pinionRadius, Double theta, Double alpha) {
+    public void setPenPosition(Point2D.Double pinionPosition, Double pinionRadius, Double theta, Double alpha) {
         double penX = pinionPosition.x + pinionRadius * Math.cos(theta + alpha);
         double penY = pinionPosition.y + pinionRadius * Math.sin(theta + alpha);
         this.position.setLocation(penX, penY);

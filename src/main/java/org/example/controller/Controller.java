@@ -14,7 +14,6 @@ import javax.swing.event.MouseInputAdapter;
 import org.example.model.Model;
 import org.example.view.View;
 
-
 public class Controller extends MouseInputAdapter implements MouseWheelListener {
     protected Model model;
     protected View view;
@@ -26,10 +25,11 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         RESIZE_RADIUS,
         PAN
     }
+
     private DraggingMode draggingMode = DraggingMode.NONE;
 
     // マウスリスナーの登録
-    public Controller(View view ,Model model) {
+    public Controller(View view, Model model) {
         this.view = view;
         this.model = model;
         view.addMouseListener(this);
@@ -41,9 +41,11 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         Integer amount = -e_wheel.getWheelRotation();
         int modifiers = e_wheel.getModifiersEx();
         boolean isShiftDown = (modifiers & MouseEvent.SHIFT_DOWN_MASK) != 0;
-        if(amount == 0) return;
+        if (amount == 0)
+            return;
         Point scroll = new Point(0, amount);
-        if(isShiftDown) scroll = new Point(amount, 0);
+        if (isShiftDown)
+            scroll = new Point(amount, 0);
         view.scaling(isShiftDown);
     }
 
@@ -68,16 +70,16 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         Point pressedPoint = e_press.getPoint();
         pressPoint = pressedPoint;
 
-    // ギア中心までの距離を計算
-    double distance = pressedPoint.distance(model.getSpurGearPosition());
+        // ギア中心までの距離を計算
+        double distance = pressedPoint.distance(model.getSpurGearPosition());
 
-    if (distance < 10) {
-        draggingMode = DraggingMode.MOVE_CENTER;
-    } else if (Math.abs(distance - model.getSpurGearRadius()) < 10) {
-        draggingMode = DraggingMode.RESIZE_RADIUS;
-    } else {
-        draggingMode = DraggingMode.PAN;
-    }
+        if (distance < 10) {
+            draggingMode = DraggingMode.MOVE_CENTER;
+        } else if (Math.abs(distance - model.getSpurGearRadius()) < 10) {
+            draggingMode = DraggingMode.RESIZE_RADIUS;
+        } else {
+            draggingMode = DraggingMode.PAN;
+        }
 
         model.mousePressed(pressedPoint);
     }
@@ -121,51 +123,54 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     }
 }
 
-    /*public void mouseMoved(MouseEvent e_cursor) {
-        Point p = e_cursor.getPoint();
-        double d = p.distance(model.getSpurGearPosition());
-        if (d < 10) {
-            view.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-        } else if (Math.abs(d - model.getSpurGearRadius()) < 10) {
-            view.setCursor(Cursor.getPredefinedCursor(Cursor.SE_RESIZE_CURSOR));
-        } else {
-            view.setCursor(Cursor.getDefaultCursor());
-        }
-    }*/
-
-
-
-// modelに欲しいかもしれないもの
-/*public void moveSpurGearBy(int dx, int dy) {
-    spurPosition.setLocation(spurPosition.getX() + dx, spurPosition.getY() + dy);
-    
-    // ピニオンやペンも相対移動
-    pinionPosition.setLocation(pinionPosition.getX() + dx, pinionPosition.getY() + dy);
-    penPosition.setLocation(penPosition.getX() + dx, penPosition.getY() + dy);
-}
-
-public void setSpurRadius(double newRadius) {
-    spurRadius = newRadius;
-}
+/*
+ * public void mouseMoved(MouseEvent e_cursor) {
+ * Point p = e_cursor.getPoint();
+ * double d = p.distance(model.getSpurGearPosition());
+ * if (d < 10) {
+ * view.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+ * } else if (Math.abs(d - model.getSpurGearRadius()) < 10) {
+ * view.setCursor(Cursor.getPredefinedCursor(Cursor.SE_RESIZE_CURSOR));
+ * } else {
+ * view.setCursor(Cursor.getDefaultCursor());
+ * }
+ * }
  */
 
+// modelに欲しいかもしれないもの
+/*
+ * public void moveSpurGearBy(int dx, int dy) {
+ * spurPosition.setLocation(spurPosition.getX() + dx, spurPosition.getY() + dy);
+ * 
+ * // ピニオンやペンも相対移動
+ * pinionPosition.setLocation(pinionPosition.getX() + dx, pinionPosition.getY()
+ * + dy);
+ * penPosition.setLocation(penPosition.getX() + dx, penPosition.getY() + dy);
+ * }
+ * 
+ * public void setSpurRadius(double newRadius) {
+ * spurRadius = newRadius;
+ * }
+ */
 
- //viewに欲しいかもしれないもの
- /*private int offsetX = 0;
-private int offsetY = 0;
-
-public void pan(int dx, int dy) {
-    offsetX += dx;
-    offsetY += dy;
-    repaint();
-}
-
-public Point2D toWorldCoordinates(Point screenPoint) {
-    return new Point2D.Double(screenPoint.x - offsetX, screenPoint.y - offsetY);
-}
-
-public Point toScreenCoordinates(Point2D worldPoint) {
-    return new Point((int)(worldPoint.getX() + offsetX), (int)(worldPoint.getY() + offsetY));
-}
-
+// viewに欲しいかもしれないもの
+/*
+ * private int offsetX = 0;
+ * private int offsetY = 0;
+ * 
+ * public void pan(int dx, int dy) {
+ * offsetX += dx;
+ * offsetY += dy;
+ * repaint();
+ * }
+ * 
+ * public Point2D toWorldCoordinates(Point screenPoint) {
+ * return new Point2D.Double(screenPoint.x - offsetX, screenPoint.y - offsetY);
+ * }
+ * 
+ * public Point toScreenCoordinates(Point2D worldPoint) {
+ * return new Point((int)(worldPoint.getX() + offsetX), (int)(worldPoint.getY()
+ * + offsetY));
+ * }
+ * 
  */
