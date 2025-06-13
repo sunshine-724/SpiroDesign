@@ -14,13 +14,14 @@ import javax.swing.event.MouseInputAdapter;
 import org.example.model.Model;
 import org.example.view.View;
 
-
 public class Controller extends MouseInputAdapter implements MouseWheelListener {
     protected Model model;
     protected View view;
-    /*private Gear spurGear; 
-    private Gear pinionGear;
-    private Pen pen;*/
+    /*
+     * private Gear spurGear;
+     * private Gear pinionGear;
+     * private Pen pen;
+     */
     private Point previous = null;
     private Point current = null;
 
@@ -33,7 +34,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     }
 
     // マウスリスナーの登録
-    public Controller(View view ,Model model) {
+    public Controller(View view, Model model) {
         this.view = view;
         this.model = model;
         view.addMouseListener(this);
@@ -45,10 +46,12 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         Integer amount = -e_wheel.getWheelRotation();
         int modifiers = e_wheel.getModifiersEx();
         boolean isShiftDown = (modifiers & MouseEvent.SHIFT_DOWN_MASK) != 0;
-        if(amount == 0) return;
+        if (amount == 0)
+            return;
         Point scroll = new Point(0, amount);
-        if(isShiftDown) scroll = new Point(amount, 0);
-        view.scaling(isShiftDown); //エラーは消えたけど多分違う
+        if (isShiftDown)
+            scroll = new Point(amount, 0);
+        view.scaling(isShiftDown); // エラーは消えたけど多分違う
     }
 
     private Mode currentMode = Mode.NONE;
@@ -63,19 +66,21 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
 
     public void mousePressed(MouseEvent e_press) {
         Point pressedPoint = e_press.getPoint();
-        /*Point2D worldPoint = view.toWorldCoordinates(pressedPoint);
-        boolean inSpur = spurGear.contains(worldPoint);
-        boolean inPinion = pinionGear.contains(worldPoint);
-        boolean onPen = pen.contains(worldPoint);
-        if (inSpur && !inPinion) {
-            currentMode = Mode.SPUR_GEAR;
-        }else if (inPinion && !onPen) {
-            currentMode = Mode.PINION_GEAR;
-        }else if (!inSpur) {
-            currentMode = Mode.PAN;
-        }else {
-            currentMode = Mode.NONE;
-        }*/
+        /*
+         * Point2D worldPoint = view.toWorldCoordinates(pressedPoint);
+         * boolean inSpur = spurGear.contains(worldPoint);
+         * boolean inPinion = pinionGear.contains(worldPoint);
+         * boolean onPen = pen.contains(worldPoint);
+         * if (inSpur && !inPinion) {
+         * currentMode = Mode.SPUR_GEAR;
+         * }else if (inPinion && !onPen) {
+         * currentMode = Mode.PINION_GEAR;
+         * }else if (!inSpur) {
+         * currentMode = Mode.PAN;
+         * }else {
+         * currentMode = Mode.NONE;
+         * }
+         */
         model.mousePressed(pressedPoint);
     }
 
@@ -87,30 +92,33 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
 
     public void mouseDragged(MouseEvent e_drag) {
         Point currentPoint = e_drag.getPoint();
-        /*Point2D currentWorld = view.toWorldCoordinates(currentPoint);
-        switch (currentMode) {
-            case SPUR_GEAR:
-                spurGear.moveTo(currentWorld);
-                view.repaint();
-                break;
-            case PINION_GEAR:
-                pinionGear.moveTo(currentWorld);
-                view.repaint();
-                break;
-            case PAN:
-                int dx = currentPoint.x - pressedPoint.x;
-                int dy = currentPoint.y - pressedPoint.y;
-                view.pan(dx, dy);
-                pressedPoint = currentPoint;
-                break;
-        }*/
+        /*
+         * Point2D currentWorld = view.toWorldCoordinates(currentPoint);
+         * switch (currentMode) {
+         * case SPUR_GEAR:
+         * spurGear.moveTo(currentWorld);
+         * view.repaint();
+         * break;
+         * case PINION_GEAR:
+         * pinionGear.moveTo(currentWorld);
+         * view.repaint();
+         * break;
+         * case PAN:
+         * int dx = currentPoint.x - pressedPoint.x;
+         * int dy = currentPoint.y - pressedPoint.y;
+         * view.pan(dx, dy);
+         * pressedPoint = currentPoint;
+         * break;
+         * }
+         */
         model.mouseDragged(currentPoint);
     }
 
-    /*public boolean contains(Point2D p) {
-        double distance = center.distance(p);
-        return distance <= radius;
-    }*/
-  
-}
+    /*
+     * public boolean contains(Point2D p) {
+     * double distance = center.distance(p);
+     * return distance <= radius;
+     * }
+     */
 
+}

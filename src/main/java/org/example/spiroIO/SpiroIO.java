@@ -12,7 +12,21 @@ import java.io.ObjectOutputStream;
 import java.io.IOException;
 
 public class SpiroIO {
+    /**
+     * SpiroIOクラスは、Spiroのモデルとペンの状態をファイルに保存および読み込みするためのクラスです。
+     * 
+     * @param file
+     * @param model
+     * @param pen
+     */
 
+    /**
+     * saveSpiroメソッドは、指定されたファイルにSpiroのモデルとペンの状態を保存します。
+     * 
+     * @param file
+     * @param model
+     * @param pen
+     */
     public void saveSpiro(File file, Model model, Pen pen) {
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) {
             out.writeObject(model); // modelをシリアライズ化して保存
@@ -22,6 +36,13 @@ public class SpiroIO {
         }
     }
 
+    /**
+     * loadSpiroメソッドは、指定されたファイルからSpiroのモデルとペンの状態を読み込みます。
+     * ファイルから読み込まれたデータは、ModelとPenのオブジェクトとして返されます。
+     * 
+     * @param file 読み込むファイル
+     * @return モデルとペンのデータを含むPairオブジェクト。読み込みに失敗した場合はnullを返す。
+     */
     public Pair<Model, Pen> loadSpiro(File file) {
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
             Model modelData = (Model) in.readObject(); // modelをデシリアライズ化して取得
