@@ -36,3 +36,4 @@ public class SpiroGearTest {
         assertEquals(Color.GREEN, gear.color);
     }
 }
+

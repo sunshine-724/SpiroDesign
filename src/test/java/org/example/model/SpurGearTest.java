@@ -38,3 +38,4 @@ public class SpurGearTest {
         assertEquals(pos, gear.getSpurPosition());
     }
 }
+
