@@ -213,7 +213,7 @@ public class Model {
      * @param position スパーギアの中心位置(絶対座標)
      */
 
-    public void changeSpurGeearRadius(Double radius) {
+    public void changeSpurGearRadius(Double radius) {
         spurGear.changeRadius(radius);
     }
 
