@@ -51,9 +51,9 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         if (amount == 0)
             return;
         Point scroll = new Point(0, amount);
-        if (isShiftDown)
-            scroll = new Point(amount, 0);
-        view.scaling(isShiftDown); // エラーは消えたけど多分違う
+        if(isShiftDown) scroll = new Point(amount, 0);
+        view.scaling(isShiftDown);
+        develop-desktop
     }
 
     private Point pressPoint;
