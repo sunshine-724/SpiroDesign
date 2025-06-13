@@ -256,6 +256,15 @@ public class Model {
     }
 
     /**
+     * ピニオンギアのペンの位置を設定します。
+     * @param position
+     */
+
+    public void setPenPosition(Point2D.Double position) {
+        pinionGear.setPenPosition(position);
+    }
+
+    /**
      * ピニオンギアのペンのサイズを取得します。
      * 
      * @return ピニオンギアのペンのサイズ
