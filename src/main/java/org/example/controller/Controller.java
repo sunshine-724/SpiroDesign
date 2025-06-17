@@ -18,7 +18,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     protected Model model;
     protected View view;
 
-    // 変数の定義
+    // モードの定義
     private enum DraggingMode {
         NONE,
         MOVE_SPUR_CENTER,
@@ -106,8 +106,6 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         switch (draggingMode) {
             case MOVE_SPUR_CENTER:
                 model.moveSpurGearBy(dx, dy);
-                model.movePinionGearBy(dx, dy);
-                model.movePenBy(dx, dy);
                 break;
 
             case RESIZE_SPUR_RADIUS:
@@ -117,13 +115,14 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
                 break;
 
             case MOVE_PINION:
-                Point2D newCenter = new Point2D.Double(
+                Point2D.Double newCenter = new Point2D.Double(
                     model.getSpurGearPosition().getX() + (currentWorld.getX() - model.getSpurGearPosition().getX()),
                     model.getSpurGearPosition().getY() + (currentWorld.getY() - model.getSpurGearPosition().getY())
                 );
                 double newPinionRadius = newCenter.distance(model.getSpurGearPosition());
                 model.setPinionGearPosition(newCenter);
                 model.changePinionGearRadius(newPinionRadius);
+                model.movePenBy(dx, dy);
                 break;
 
             case PAN:
