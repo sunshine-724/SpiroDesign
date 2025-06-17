@@ -245,7 +245,7 @@ public class Model {
      * @param dy 移動量のY座標
      */
 
-    public void moveSpurGearBy(int dx, int dy) {
+    public void moveSpurGearBy(double dx, double dy) {
         spurGear.setPosition(new Point2D.Double(spurGear.getSpurPosition().x + dx,
                 spurGear.getSpurPosition().y + dy));
 
