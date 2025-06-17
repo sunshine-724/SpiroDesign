@@ -173,8 +173,9 @@ public class Model {
      * 
      * @param position ピニオンギアの位置(絶対座標)
      */
-    public void setPinionGearPosition(Point2D.Double position) {
-        pinionGear.setPosition(position);
+    public void setPinionGearPosition(Point2D position) {
+        Point2D.Double newPosition = new Point2D.Double(position.getX(),position.getY());
+        pinionGear.setPosition(newPosition);
     }
 
     /**
@@ -237,6 +238,27 @@ public class Model {
     }
 
     /**
+     * スパーギアとピニオンギアを指定された座標に移動します。
+     * このメソッドは、スパーギアとピニオンギアの位置を指定された座標に移動させます。
+     * ペンの位置もピニオンギアが移動すると同時に更新されます。
+     * @param dx 移動量のX座標
+     * @param dy 移動量のY座標
+     */
+
+    public void moveSpurGearBy(int dx, int dy) {
+        spurGear.setPosition(new Point2D.Double(spurGear.getSpurPosition().x + dx,
+                spurGear.getSpurPosition().y + dy));
+
+        //このメソッドはピニオンギアの他にペンも同時に動きます。
+        pinionGear.setPosition(new Point2D.Double(pinionGear.getPinionPosition().x + dx,
+                pinionGear.getPinionPosition().y + dy));
+    }
+
+    public void setSpurRadius(double radius) {
+        spurGear.changeRadius(radius);
+    }
+
+    /**
      * ピニオンギアのペンの位置を取得します。
      * ペンの位置は、ピニオンギアの中心位置を基準にした相対座標から絶対座標に変換されて返されます。
      * 
@@ -271,6 +293,11 @@ public class Model {
      */
     public double getPenSize() {
         return pinionGear.getPen().getPenSize();
+    }
+
+    public void setPenPosition(Point2D pos){
+        Point2D.Double newPos = new Point2D.Double(pos.getX(),pos.getY());
+        pinionGear.setPenPosition(newPos);
     }
 
     /**
