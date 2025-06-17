@@ -159,4 +159,8 @@ public class PinionGear extends SpiroGear {
     public Pen getPen() {
         return pen;
     }
+
+    public void setPenPosition(Point2D.Double position) {
+        pen.setPosition(position);
+    }
 }
