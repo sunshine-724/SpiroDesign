@@ -11,21 +11,17 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.IOException;
 
+/**
+ * SpiroIOクラスは、SpiroGearとPenをファイルに保存および読み込みするためのクラスです。
+ */
 public class SpiroIO {
-    /**
-     * SpiroIOクラスは、Spiroのモデルとペンの状態をファイルに保存および読み込みするためのクラスです。
-     * 
-     * @param file
-     * @param model
-     * @param pen
-     */
 
     /**
-     * saveSpiroメソッドは、指定されたファイルにSpiroのモデルとペンの状態を保存します。
+     * モデルとペンの状態を指定されたファイルに保存します。
      * 
-     * @param file
-     * @param model
-     * @param pen
+     * @param file  保存するファイル
+     * @param model Spiroのモデルデータ
+     * @param pen   Spiroのペンの状態
      */
     public void saveSpiro(File file, Model model, Pen pen) {
         try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(file))) {
@@ -37,8 +33,8 @@ public class SpiroIO {
     }
 
     /**
-     * loadSpiroメソッドは、指定されたファイルからSpiroのモデルとペンの状態を読み込みます。
-     * ファイルから読み込まれたデータは、ModelとPenのオブジェクトとして返されます。
+     * 指定されたファイルからモデルとペンの状態を読み込みます。
+     * 読み込まれたデータは Pair<Model, Pen> として返されます。
      * 
      * @param file 読み込むファイル
      * @return モデルとペンのデータを含むPairオブジェクト。読み込みに失敗した場合はnullを返す。
