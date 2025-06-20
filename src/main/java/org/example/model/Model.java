@@ -110,7 +110,6 @@ public class Model {
      * 
      * @see #updateData()
      */
-
     private void updateData() {
         long currentTime = System.currentTimeMillis() - startTime;
 
@@ -131,6 +130,9 @@ public class Model {
 
     /**
      * ロード後Viewにデータの更新を通知します。
+     * @param locusData 軌跡のデータ
+     * @param penColor ペンの色
+     * @param penSize ペンのサイズ
      */
     private void notifyViewsLoading(List<Point2D.Double> locusData, Color penColor, double penSize) {
         for (View view : views) {
@@ -142,7 +144,7 @@ public class Model {
      * Viewにデータの更新を通知するためにリスナーを追加します。(Observerパターン)
      * 
      * @param view 通知を受け取るViewのインスタンス
-     * @see #notifyViewsLoading()
+     * @see #notifyViewsLoading(java.util.List, java.awt.Color, double)
      */
     public void addView(View view) {
         views.add(view);
@@ -274,6 +276,12 @@ public class Model {
         }
     }
 
+    /**
+     * スパーギアの半径を設定します。
+     * 
+     * @param radius スパーギアの半径
+     */
+
     public void setSpurRadius(double radius) {
         spurGear.changeRadius(radius);
     }
@@ -300,9 +308,8 @@ public class Model {
     /**
      * ピニオンギアのペンの位置を設定します。
      * 
-     * @param position
+     * @param position ピニオンギアのペンの位置(絶対座標)
      */
-
     public void setPenPosition(Point2D.Double position) {
         pinionGear.setPenPosition(position);
     }
@@ -379,7 +386,7 @@ public class Model {
      * このメソッドは、マウスの位置を引数として受け取り、ドラッグイベントに応じた処理を行います。
      * 例えば、ピニオンギアの位置を更新したり、スパーギアの半径を変更したりすることができます。
      * 
-     * @param position
+     * @param position マウスの位置
      */
     public void mouseDragged(Point position) {
 
@@ -422,9 +429,8 @@ public class Model {
      * 読み込みに失敗した場合は、エラーメッセージを表示します。
      * 
      * @see org.example.spiroIO.SpiroIO#loadSpiro(File)
-     * @param file
+     * @param file 読み込み対象のファイル
      * @return 読み込みに成功した場合はtrue、失敗した場合はfalseを返します。
-     * @throws Exception 読み込みに失敗した場合にスローされる例外
      */
     public Boolean loadData(File file) {
         try {
@@ -458,11 +464,10 @@ public class Model {
      * 保存に失敗した場合は、エラーメッセージを表示します。
      * 
      * @see org.example.spiroIO.SpiroIO#saveSpiro(File, Model, Pen)
-     * @param file
-     * @param model
-     * @param pen
+     * @param file 保存先のファイル
+     * @param model 保存するModelのインスタンス
+     * @param pen 保存するPenのインスタンス
      * @return 保存に成功した場合はtrue、失敗した場合はfalseを返します。
-     * @throws Exception 保存に失敗した場合にスローされる例外
      */
     public Boolean saveData(File file, Model model, Pen pen) {
         try {
