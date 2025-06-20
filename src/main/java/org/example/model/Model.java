@@ -110,7 +110,6 @@ public class Model {
      * 
      * @see #updateData()
      */
-
     private void updateData() {
         long currentTime = System.currentTimeMillis() - startTime;
 
@@ -131,10 +130,13 @@ public class Model {
 
     /**
      * ロード後Viewにデータの更新を通知します。
+     * @param locusData 軌跡のデータ
+     * @param penColor ペンの色
+     * @param penSize ペンのサイズ
      */
     private void notifyViewsLoading(List<Point2D.Double> locusData, Color penColor, double penSize) {
         for (View view : views) {
-            view.setLocusData(locusData,penColor, penSize);
+            view.setLocusData(locusData, penColor, penSize);
         }
     }
 
@@ -142,7 +144,7 @@ public class Model {
      * Viewにデータの更新を通知するためにリスナーを追加します。(Observerパターン)
      * 
      * @param view 通知を受け取るViewのインスタンス
-     * @see #notifyViewsLoading()
+     * @see #notifyViewsLoading(java.util.List, java.awt.Color, double)
      */
     public void addView(View view) {
         views.add(view);
@@ -173,8 +175,9 @@ public class Model {
      * 
      * @param position ピニオンギアの位置(絶対座標)
      */
-    public void setPinionGearPosition(Point2D.Double position) {
-        pinionGear.setPosition(position);
+    public void setPinionGearPosition(Point2D position) {
+        Point2D.Double newPosition = new Point2D.Double(position.getX(), position.getY());
+        pinionGear.setPosition(newPosition);
     }
 
     /**
@@ -239,19 +242,45 @@ public class Model {
     /**
      * スパーギアとピニオンギアを指定された座標に移動します。
      * このメソッドは、スパーギアとピニオンギアの位置を指定された座標に移動させます。
-     * ピニオンギアの位置は、スパーギアの中心位置を基準にした相対座標で更新されます。
      * ペンの位置もピニオンギアが移動すると同時に更新されます。
+     * 
      * @param dx 移動量のX座標
      * @param dy 移動量のY座標
      */
 
-    public void moveSpurGearBy(int dx, int dy) {
+    public void moveSpurGearBy(double dx, double dy) {
         spurGear.setPosition(new Point2D.Double(spurGear.getSpurPosition().x + dx,
                 spurGear.getSpurPosition().y + dy));
 
+        // このメソッドはピニオンギアの他にペンも同時に動きます。
         pinionGear.setPosition(new Point2D.Double(pinionGear.getPinionPosition().x + dx,
                 pinionGear.getPinionPosition().y + dy));
     }
+
+    /**
+     * ピニオンギアのペンの位置を指定された座標に移動します。
+     * 
+     * @param dx 移動量のX座標
+     * @param dy 移動量のY座標
+     */
+
+    public void movePenBy(double dx, double dy) {
+        Point2D.Double penPosition = pinionGear.getPen().getPosition();
+
+        if (penPosition != null) {
+            double newX = penPosition.getX() + dx;
+            double newY = penPosition.getY() + dy;
+
+            penPosition = new Point2D.Double(newX, newY);
+            pinionGear.setPenPosition(penPosition);
+        }
+    }
+
+    /**
+     * スパーギアの半径を設定します。
+     * 
+     * @param radius スパーギアの半径
+     */
 
     public void setSpurRadius(double radius) {
         spurGear.changeRadius(radius);
@@ -277,12 +306,26 @@ public class Model {
     }
 
     /**
+     * ピニオンギアのペンの位置を設定します。
+     * 
+     * @param position ピニオンギアのペンの位置(絶対座標)
+     */
+    public void setPenPosition(Point2D.Double position) {
+        pinionGear.setPenPosition(position);
+    }
+
+    /**
      * ピニオンギアのペンのサイズを取得します。
      * 
      * @return ピニオンギアのペンのサイズ
      */
     public double getPenSize() {
         return pinionGear.getPen().getPenSize();
+    }
+
+    public void setPenPosition(Point2D pos) {
+        Point2D.Double newPos = new Point2D.Double(pos.getX(), pos.getY());
+        pinionGear.setPenPosition(newPos);
     }
 
     /**
@@ -343,10 +386,10 @@ public class Model {
      * このメソッドは、マウスの位置を引数として受け取り、ドラッグイベントに応じた処理を行います。
      * 例えば、ピニオンギアの位置を更新したり、スパーギアの半径を変更したりすることができます。
      * 
-     * @param position
+     * @param position マウスの位置
      */
     public void mouseDragged(Point position) {
-        
+
     }
 
     /**
@@ -386,9 +429,8 @@ public class Model {
      * 読み込みに失敗した場合は、エラーメッセージを表示します。
      * 
      * @see org.example.spiroIO.SpiroIO#loadSpiro(File)
-     * @param file
+     * @param file 読み込み対象のファイル
      * @return 読み込みに成功した場合はtrue、失敗した場合はfalseを返します。
-     * @throws Exception 読み込みに失敗した場合にスローされる例外
      */
     public Boolean loadData(File file) {
         try {
@@ -404,13 +446,13 @@ public class Model {
                 notifyViewsLoading(locus, penColor, penSize); // Viewにデータの更新を通知
 
                 return true; // 読み込みに成功した場合はtrueを返す
-            }else {
+            } else {
                 System.err.println("Failed to load data: No data found in the file.");
                 return false; // 読み込みに失敗した場合はfalseを返す
             }
         } catch (Exception e) {
             System.err.println("Error loading data: " + e.getMessage());
-            
+
             // エラーメッセージを表示するなどの処理を追加
             return false; // 読み込みに失敗した場合はfalseを返す
         }
@@ -422,14 +464,13 @@ public class Model {
      * 保存に失敗した場合は、エラーメッセージを表示します。
      * 
      * @see org.example.spiroIO.SpiroIO#saveSpiro(File, Model, Pen)
-     * @param file
-     * @param model
-     * @param pen
+     * @param file 保存先のファイル
+     * @param model 保存するModelのインスタンス
+     * @param pen 保存するPenのインスタンス
      * @return 保存に成功した場合はtrue、失敗した場合はfalseを返します。
-     * @throws Exception 保存に失敗した場合にスローされる例外
      */
     public Boolean saveData(File file, Model model, Pen pen) {
-        try{
+        try {
             spiroIO.saveSpiro(file, model, pen);
             return true; // 保存に成功した場合はtrueを返す
         } catch (Exception e) {
