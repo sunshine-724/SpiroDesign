@@ -135,29 +135,50 @@ import org.example.view.View;
                 Point2D spurCenter = model.getSpurGearPosition();
                 double spurRadius = model.getSpurGearRadius();
 
+                // マウス位置との差分ベクトル
                 double dxRaw = currentWorld.getX() - spurCenter.getX();
                 double dyRaw = currentWorld.getY() - spurCenter.getY();
-                double dist = Math.hypot(dxRaw, dyRaw);
-                if (dist >= spurRadius) break; // ピニオンが外に飛び出すのを防ぐ
+                double dist = Math.hypot(dxRaw, dyRaw); // 中心間距離
 
-                // 新しいピニオン半径：スパー半径 - 中心間距離
-                double newPinionRadius = spurRadius - dist;
-                if (newPinionRadius < 1.0) newPinionRadius = 1.0; // 最小値を制限
+                if (dist < 5) break; // ゼロ割防止
 
-                // 単位ベクトル
+                // 単位ベクトル（スパー中心→マウス方向）
                 double unitX = dxRaw / dist;
                 double unitY = dyRaw / dist;
 
-                // 新しいピニオン中心
-                double newCenterX = spurCenter.getX() + unitX * dist;
-                double newCenterY = spurCenter.getY() + unitY * dist;
+                // 内接 or 外接を切り替え
+                double newPinionRadius;
+                double distanceFromSpurCenter;
+                double threshold = 5.0; // 境界許容範囲（半径5以内なら内接）
+
+                if (Math.abs(dist - spurRadius) < threshold) {
+                    // 境界近く → 内接にスナップ
+                    newPinionRadius = spurRadius - dist;
+                    distanceFromSpurCenter = spurRadius - newPinionRadius;
+                } else if (dist < spurRadius) {
+                    // 完全に内接
+                    newPinionRadius = spurRadius - dist;
+                    distanceFromSpurCenter = spurRadius - newPinionRadius;
+                } else {
+                    // 外接
+                    newPinionRadius = dist - spurRadius;
+                    distanceFromSpurCenter = spurRadius + newPinionRadius;
+                }
+
+                // 最小半径制限
+                if (newPinionRadius < 5.0) newPinionRadius = 5.0;
+
+                // 新しいピニオンの中心（内接・外接どちらでも）
+                double newCenterX = spurCenter.getX() + unitX * distanceFromSpurCenter;
+                double newCenterY = spurCenter.getY() + unitY * distanceFromSpurCenter;
                 Point2D.Double newCenter = new Point2D.Double(newCenterX, newCenterY);
 
-                // モデル更新
+                // モデルに反映
                 model.setPinionGearPosition(newCenter);
                 model.changePinionGearRadius(newPinionRadius);
-
                 model.movePenBy(dx, dy);
+                break;
+
 
             case PAN:
                 int panDx = currentPoint.x - pressPoint.x;
