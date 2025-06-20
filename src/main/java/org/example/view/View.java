@@ -23,6 +23,8 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import javax.swing.JPopupMenu;
 import javax.swing.BoxLayout;
+import java.awt.event.MouseEvent;
+import java.awt.AWTEvent;
 
 /**
  * スピログラフアプリケーションのViewクラス。
@@ -95,7 +97,7 @@ public class View extends JPanel {
         subButton = new HashMap<>();
         penSizeDisplay = new HashMap<>();
 
-        String[] buttonNames = { "Pen", "SpurGear", "PinionGear", "Start", "Stop", "Clear", "Save", "Load" };
+        String[] buttonNames = { /*"Pen", "SpurGear", "PinionGear",*/ "Start", "Stop", "Clear", "Save", "Load" };
         for (String name : buttonNames) {
             JButton button = new JButton(name);
             subButton.put(name, button);
@@ -119,6 +121,10 @@ public class View extends JPanel {
         MenuDisplay.add(menuContentPanel);
 
         setVisible(true);
+
+        // 右クリックメニューのための初期化
+        setComponentPopupMenu(null); // デフォルトのポップアップを無効化
+        enableEvents(AWTEvent.MOUSE_EVENT_MASK); // マウスイベントを受け取る
 
         messageTimer = new Timer(MESSAGE_DISPLAY_DURATION, e -> {
             saveMessage = null;
@@ -589,5 +595,16 @@ public class View extends JPanel {
         viewOffset.x += dx;
         viewOffset.y += dy;
         repaint();
+    }
+
+    /**
+     * マウスイベントを処理し、右クリック時にメニューを表示
+     */
+    @Override
+    protected void processMouseEvent(MouseEvent e) {
+        super.processMouseEvent(e);
+        if (e.isPopupTrigger() || (e.getButton() == MouseEvent.BUTTON3 && e.getID() == MouseEvent.MOUSE_RELEASED)) {
+            showMenu(e.getX(), e.getY());
+        }
     }
 }
