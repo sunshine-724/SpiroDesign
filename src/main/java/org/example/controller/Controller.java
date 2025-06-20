@@ -6,6 +6,7 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.geom.Point2D;
 
+import javax.swing.SwingUtilities;
 import javax.swing.event.MouseInputAdapter;
 
 import org.example.model.Model;
@@ -40,6 +41,13 @@ import org.example.view.View;
     private DraggingMode draggingMode = DraggingMode.NONE;
     private Point pressPoint;
     private Point2D pressWorldPoint;
+    private boolean isInner = true;
+    private double innerLimit;
+    private double outerLimit;
+
+    private Point2D.Double switchCenterInnerToOuter = null;
+    private Point2D.Double switchCenterOuterToInner = null;
+
         
     /**
      * コンストラクタ
@@ -85,6 +93,11 @@ import org.example.view.View;
     public void mousePressed(MouseEvent e_press) {
         Point pressedPoint = e_press.getPoint();
         Point2D pressWorldPoint = view.screenToWorld(pressedPoint);
+
+        if (e_press.isPopupTrigger() || SwingUtilities.isRightMouseButton(e_press)) {
+        view.showMenu(pressedPoint.x, pressedPoint.y);
+        return;  // 右クリック時は他の操作をしない
+    }
 
         Point2D spurCenter = model.getSpurGearPosition();
         double spurRadius = model.getSpurGearRadius();
@@ -135,49 +148,55 @@ import org.example.view.View;
                 Point2D spurCenter = model.getSpurGearPosition();
                 double spurRadius = model.getSpurGearRadius();
 
-                // マウス位置との差分ベクトル
                 double dxRaw = currentWorld.getX() - spurCenter.getX();
                 double dyRaw = currentWorld.getY() - spurCenter.getY();
-                double dist = Math.hypot(dxRaw, dyRaw); // 中心間距離
+                double dist = Math.hypot(dxRaw, dyRaw);
+                if (dist < 5) break;
 
-                if (dist < 5) break; // ゼロ割防止
-
-                // 単位ベクトル（スパー中心→マウス方向）
                 double unitX = dxRaw / dist;
                 double unitY = dyRaw / dist;
 
-                // 内接 or 外接を切り替え
-                double newPinionRadius;
-                double distanceFromSpurCenter;
-                double threshold = 5.0; // 境界許容範囲（半径5以内なら内接）
-
-                if (Math.abs(dist - spurRadius) < threshold) {
-                    // 境界近く → 内接にスナップ
-                    newPinionRadius = spurRadius - dist;
-                    distanceFromSpurCenter = spurRadius - newPinionRadius;
-                } else if (dist < spurRadius) {
-                    // 完全に内接
-                    newPinionRadius = spurRadius - dist;
-                    distanceFromSpurCenter = spurRadius - newPinionRadius;
-                } else {
-                    // 外接
-                    newPinionRadius = dist - spurRadius;
-                    distanceFromSpurCenter = spurRadius + newPinionRadius;
-                }
+                // ここで「動的なピニオン半径」を計算（マウスに応じて）
+                double newPinionRadius = Math.abs(spurRadius - dist);  // 内接・外接のどちらでも正しく求まる
 
                 // 最小半径制限
-                if (newPinionRadius < 5.0) newPinionRadius = 5.0;
+                double minRadius = 5.0;
+                if (newPinionRadius < minRadius) {
+                    newPinionRadius = minRadius;
+                }
 
-                // 新しいピニオンの中心（内接・外接どちらでも）
+                // 内接/外接の判定と切り替え
+                double hysteresis = 2.0;
+                double innerLimit = spurRadius - newPinionRadius + hysteresis;
+                double outerLimit = spurRadius + newPinionRadius - hysteresis;
+
+                if (isInner) {
+                    if (dist >= innerLimit) {
+                        // 内接 → 外接
+                        isInner = false;
+                    }
+                } else {
+                    if (dist <= outerLimit) {
+                        // 外接 → 内接
+                        isInner = true;
+                    }
+                }
+
+                // 中心座標の計算（状態に応じて）
+                double distanceFromSpurCenter = isInner
+                    ? spurRadius - newPinionRadius
+                    : spurRadius + newPinionRadius;
+
                 double newCenterX = spurCenter.getX() + unitX * distanceFromSpurCenter;
                 double newCenterY = spurCenter.getY() + unitY * distanceFromSpurCenter;
                 Point2D.Double newCenter = new Point2D.Double(newCenterX, newCenterY);
 
-                // モデルに反映
+                // モデル更新
                 model.setPinionGearPosition(newCenter);
                 model.changePinionGearRadius(newPinionRadius);
                 model.movePenBy(dx, dy);
                 break;
+
 
 
             case PAN:
