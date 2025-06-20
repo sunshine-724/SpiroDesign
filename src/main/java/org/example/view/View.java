@@ -24,38 +24,65 @@ import java.awt.FontMetrics;
 import javax.swing.JPopupMenu;
 import javax.swing.BoxLayout;
 
+/**
+ * スピログラフアプリケーションのViewクラス。
+ * Modelの状態を描画し、UI部品を管理します。
+ */
 public class View extends JPanel {
 
+    /** Modelインスタンス */
     private Model model;
 
+    /** メニュー表示用ポップアップ */
     public JPopupMenu MenuDisplay;
+    /** サブボタン群 */
     public Map<String, JButton> subButton;
+    /** 速度表示・入力欄 */
     public JTextField speedDisplay;
+    /** ペンサイズ選択ボタン群 */
     public Map<String, JButton> penSizeDisplay;
+    /** カラーパレット */
     public JColorChooser colorPalletDisplay;
 
+    /** 拡大縮小率 */
     private double scale = 1.0;
     private static final double MIN_SCALE = 0.5;
     private static final double MAX_SCALE = 2.0;
 
+    /** ビューのオフセット（パン用） */
     private Point2D.Double viewOffset = new Point2D.Double(0, 0);
 
+    /** スパーギア定義中フラグ */
     private boolean isDefiningSpurGear = false;
+    /** スパーギア中心（スクリーン座標） */
     private Point spurGearCenterScreen = null;
+    /** スパーギアドラッグ点（スクリーン座標） */
     private Point currentDragPointScreen = null;
 
+    /** ピニオンギア定義中フラグ */
     private boolean isDefiningPinionGear = false;
+    /** ピニオンギア中心（スクリーン座標） */
     private Point pinionGearCenterScreen = null;
+    /** ピニオンギアドラッグ点（スクリーン座標） */
     private Point currentDragPointScreenForPinion = null;
 
+    /** ロードされた軌跡データ */
     private List<Point2D.Double> loadedLocusData = null;
+    /** ロードされたペン色 */
     private Color loadedPenColor = null;
+    /** ロードされたペンサイズ */
     private double loadedPenSize = -1.0;
 
+    /** 保存メッセージ */
     private String saveMessage = null;
+    /** メッセージ表示用タイマー */
     private Timer messageTimer;
     private static final int MESSAGE_DISPLAY_DURATION = 2000;
 
+    /**
+     * Viewのコンストラクタ
+     * @param model Modelインスタンス
+     */
     public View(Model model) {
         this.model = model;
 
@@ -102,6 +129,10 @@ public class View extends JPanel {
         messageTimer.setRepeats(false);
     }
 
+    /**
+     * 描画処理
+     * @param g グラフィックス
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -179,6 +210,10 @@ public class View extends JPanel {
         }
     }
 
+    /**
+     * 保存メッセージを描画
+     * @param g2d グラフィックス2D
+     */
     private void drawSaveMessage(Graphics2D g2d) {
         Font font = new Font("SansSerif", Font.BOLD, 24);
         g2d.setFont(font);
@@ -200,6 +235,11 @@ public class View extends JPanel {
         g2d.drawString(saveMessage, x + padding, y + padding + metrics.getAscent());
     }
 
+    /**
+     * ピニオンギアを描画
+     * @param g グラフィックス2D
+     * @param position ギア中心座標
+     */
     public void displayPinion(Graphics2D g, Point2D.Double position) {
         Color originalColor = g.getColor();
         java.awt.Stroke originalStroke = g.getStroke();
@@ -218,10 +258,21 @@ public class View extends JPanel {
         g.setStroke(originalStroke);
     }
 
+    /**
+     * マウスポインタを描画（未実装）
+     * @param g グラフィックス2D
+     * @param position 座標
+     * @param color 色
+     */
     public void displayMousePointer(Graphics2D g, Point2D.Double position, Color color) {
         // 未実装
     }
 
+    /**
+     * スパーギアを描画
+     * @param g グラフィックス2D
+     * @param position ギア中心座標
+     */
     public void displaySpur(Graphics2D g, Point2D.Double position) {
         Color originalColor = g.getColor();
         java.awt.Stroke originalStroke = g.getStroke();
@@ -240,6 +291,12 @@ public class View extends JPanel {
         g.setStroke(originalStroke);
     }
 
+    /**
+     * ペンを描画
+     * @param g グラフィックス2D
+     * @param position ペン座標
+     * @param color ペン色
+     */
     public void displayDrawPen(Graphics2D g, Point2D.Double position, Color color) {
         Color originalColor = g.getColor();
         java.awt.Stroke originalStroke = g.getStroke();
@@ -255,6 +312,10 @@ public class View extends JPanel {
         g.setStroke(originalStroke);
     }
 
+    /**
+     * スピログラフの軌跡を描画
+     * @param g2d グラフィックス2D
+     */
     private void displaySpirographLocus(Graphics2D g2d) {
         Color originalColor = g2d.getColor();
         java.awt.Stroke originalStroke = g2d.getStroke();
@@ -288,6 +349,10 @@ public class View extends JPanel {
         g2d.setStroke(originalStroke);
     }
 
+    /**
+     * 拡大縮小
+     * @param zoomIn trueで拡大、falseで縮小
+     */
     public void scaling(boolean zoomIn) {
         double scaleChange = zoomIn ? 0.1 : -0.1;
         double newScale = scale + scaleChange;
@@ -298,10 +363,18 @@ public class View extends JPanel {
         }
     }
 
+    /**
+     * 現在のスケール値を取得
+     * @return スケール値
+     */
     public double getScale() {
         return scale;
     }
 
+    /**
+     * スケール値を設定
+     * @param newScale 新しいスケール
+     */
     public void setScale(double newScale) {
         if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
             scale = newScale;
@@ -309,10 +382,18 @@ public class View extends JPanel {
         }
     }
 
+    /**
+     * スケール値をパーセント表記で取得
+     * @return 例: "100%"
+     */
     public String getScalePercent() {
         return (int) (scale * 100) + "%";
     }
 
+    /**
+     * 保存ファイル選択ダイアログ
+     * @return 選択ファイル
+     */
     public File chooseSaveFile() {
         JFileChooser fileChooser = new JFileChooser();
         int result = fileChooser.showSaveDialog(this);
@@ -322,6 +403,10 @@ public class View extends JPanel {
         return null;
     }
 
+    /**
+     * 読込ファイル選択ダイアログ
+     * @return 選択ファイル
+     */
     public File chooseLoadFile() {
         JFileChooser fileChooser = new JFileChooser();
         int result = fileChooser.showOpenDialog(this);
@@ -331,12 +416,21 @@ public class View extends JPanel {
         return null;
     }
 
+    /**
+     * スクリーン座標をワールド座標に変換
+     * @param screenPoint スクリーン座標
+     * @return ワールド座標
+     */
     public Point2D.Double screenToWorld(Point screenPoint) {
         double worldX = (screenPoint.getX() / scale) - (viewOffset.x / scale);
         double worldY = (screenPoint.getY() / scale) - (viewOffset.y / scale);
         return new Point2D.Double(worldX, worldY);
     }
 
+    /**
+     * スパーギア定義モード設定
+     * @param defining trueで定義中
+     */
     public void setDefiningSpurGear(boolean defining) {
         this.isDefiningSpurGear = defining;
         if (!defining) {
@@ -345,17 +439,28 @@ public class View extends JPanel {
         repaint();
     }
 
+    /**
+     * スパーギア中心（スクリーン座標）設定
+     * @param p スクリーン座標
+     */
     public void setSpurGearCenterScreen(Point p) {
         this.spurGearCenterScreen = p;
         this.currentDragPointScreen = p;
         repaint();
     }
 
+    /**
+     * スパーギアドラッグ点（スクリーン座標）設定
+     * @param p スクリーン座標
+     */
     public void setCurrentDragPointScreen(Point p) {
         this.currentDragPointScreen = p;
         repaint();
     }
 
+    /**
+     * スパーギア定義情報クリア
+     */
     public void clearSpurGearDefinition() {
         this.isDefiningSpurGear = false;
         this.spurGearCenterScreen = null;
@@ -363,6 +468,10 @@ public class View extends JPanel {
         repaint();
     }
 
+    /**
+     * ピニオンギア定義モード設定
+     * @param defining trueで定義中
+     */
     public void setDefiningPinionGear(boolean defining) {
         this.isDefiningPinionGear = defining;
         if (!defining) {
@@ -371,17 +480,28 @@ public class View extends JPanel {
         repaint();
     }
 
+    /**
+     * ピニオンギア中心（スクリーン座標）設定
+     * @param p スクリーン座標
+     */
     public void setPinionGearCenterScreen(Point p) {
         this.pinionGearCenterScreen = p;
         this.currentDragPointScreenForPinion = p;
         repaint();
     }
 
+    /**
+     * ピニオンギアドラッグ点（スクリーン座標）設定
+     * @param p スクリーン座標
+     */
     public void setCurrentDragPointScreenForPinion(Point p) {
         this.currentDragPointScreenForPinion = p;
         repaint();
     }
 
+    /**
+     * ピニオンギア定義情報クリア
+     */
     public void clearPinionGearDefinition() {
         this.isDefiningPinionGear = false;
         this.pinionGearCenterScreen = null;
@@ -389,15 +509,29 @@ public class View extends JPanel {
         repaint();
     }
 
+    /**
+     * ビューオフセット取得
+     * @return オフセット
+     */
     public Point2D.Double getViewOffset() {
         return viewOffset;
     }
 
+    /**
+     * ビューオフセット設定
+     * @param offset 新しいオフセット
+     */
     public void setViewOffset(Point2D.Double offset) {
         this.viewOffset = offset;
         repaint();
     }
 
+    /**
+     * 軌跡データ・ペン情報をViewにセット
+     * @param locus 軌跡
+     * @param penColor ペン色
+     * @param penSize ペンサイズ
+     */
     public void setLocusData(List<Point2D.Double> locus, Color penColor, double penSize) {
         this.loadedLocusData = locus;
         this.loadedPenColor = penColor;
@@ -405,6 +539,9 @@ public class View extends JPanel {
         repaint();
     }
 
+    /**
+     * ロード済み軌跡データをクリア
+     */
     public void clearLoadedLocusData() {
         this.loadedLocusData = null;
         this.loadedPenColor = null;
@@ -412,6 +549,10 @@ public class View extends JPanel {
         repaint();
     }
 
+    /**
+     * 保存成功メッセージを表示
+     * @param message メッセージ
+     */
     public void displaySaveSuccessMessage(String message) {
         this.saveMessage = message;
         repaint();
@@ -422,11 +563,20 @@ public class View extends JPanel {
         }
     }
 
+    /**
+     * メニューを表示
+     * @param x X座標
+     * @param y Y座標
+     */
     public void showMenu(int x, int y) {
         MenuDisplay.show(this, x, y);
     }
 
-    // Controllerからの画面移動(pan)操作に対応
+    /**
+     * 画面パン（移動）
+     * @param dx X方向移動量
+     * @param dy Y方向移動量
+     */
     public void pan(int dx, int dy) {
         viewOffset.x += dx;
         viewOffset.y += dy;
