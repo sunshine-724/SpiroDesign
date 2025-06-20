@@ -26,7 +26,6 @@ import javax.swing.BoxLayout;
 
 /**
  * スピログラフアプリケーションのViewクラス。
- * Modelの状態を描画し、UI部品を管理します。
  */
 public class View extends JPanel {
 
@@ -152,13 +151,22 @@ public class View extends JPanel {
         g2d.translate(viewOffset.x, viewOffset.y);
         g2d.scale(scale, scale);
 
+        // --- 中心点の描画（r=2） ---
+        // スパーギア中心
         Point2D.Double spurPosition = model.getSpurGearPosition();
         if (spurPosition != null) {
+            g2d.setColor(Color.RED);
+            int r = 2;
+            g2d.fillOval((int)(spurPosition.x - r), (int)(spurPosition.y - r), r * 2, r * 2);
             displaySpur(g2d, spurPosition);
         }
 
+        // ピニオンギア中心
         Point2D.Double pinionPosition = model.getPinionGearPosition();
         if (pinionPosition != null) {
+            g2d.setColor(Color.BLUE);
+            int r = 2;
+            g2d.fillOval((int)(pinionPosition.x - r), (int)(pinionPosition.y - r), r * 2, r * 2);
             displayPinion(g2d, pinionPosition);
         }
 
