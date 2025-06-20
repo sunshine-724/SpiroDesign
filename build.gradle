@@ -32,3 +32,14 @@ tasks.register('javadocSpiroDesign', Javadoc) {
     options.version = true
     options.links("https://docs.oracle.com/javase/8/docs/api/")
 }
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': 'org.example.Main' 
+        )
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
