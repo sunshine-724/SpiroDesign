@@ -97,7 +97,8 @@ public class View extends JPanel {
         subButton = new HashMap<>();
         penSizeDisplay = new HashMap<>();
 
-        String[] buttonNames = { /*"Pen", "SpurGear", "PinionGear",*/ "Start", "Stop", "Clear", "Save", "Load" };
+        // "SpurGear"と"PinionGear"ボタンを除外
+        String[] buttonNames = { "Start", "Stop", "Clear", "Save", "Load" };
         for (String name : buttonNames) {
             JButton button = new JButton(name);
             subButton.put(name, button);
