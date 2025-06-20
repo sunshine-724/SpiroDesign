@@ -118,7 +118,7 @@ public class PinionGear extends SpiroGear {
     /**
      * ピニオンギアの座標を取得する。
      * 
-     * @param theta ピニオンギアの座標
+     * @return ピニオンギアの現在の座標
      */
     public Point2D.Double getPinionPosition() {
         return position;
@@ -160,6 +160,11 @@ public class PinionGear extends SpiroGear {
         return pen;
     }
 
+    /**
+     * ピニオンギアに関連付けられたペンの位置を設定する。
+     * 
+     * @param position 新しいペンの位置
+     */
     public void setPenPosition(Point2D.Double position) {
         pen.setPosition(position);
     }
