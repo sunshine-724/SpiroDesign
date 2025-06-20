@@ -11,11 +11,23 @@ import javax.swing.event.MouseInputAdapter;
 import org.example.model.Model;
 import org.example.view.View;
 
-public class Controller extends MouseInputAdapter implements MouseWheelListener {
+/**
+ * Controllerクラスは、ビューとモデルを結びつけ、マウスイベントを処理します。
+ * ユーザーの操作に応じて、モデルの状態を更新し、ビューを再描画します。
+ */
+    public class Controller extends MouseInputAdapter implements MouseWheelListener {
     protected Model model;
     protected View view;
 
-    // モードの定義
+    /**
+     * ドラッグモードを定義する列挙型
+     * NONE: ドラッグしていない状態
+     * MOVE_SPUR_CENTER: スパーギアの中心を移動
+     * MOVE_PINION: ピニオンギアを移動
+     * RESIZE_SPUR_RADIUS: スパーギアの半径を変更
+     * PAN: ビューをパン（移動）
+     */
+    
     private enum DraggingMode {
         NONE,
         MOVE_SPUR_CENTER,
@@ -24,11 +36,17 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         PAN
     }
 
+
     private DraggingMode draggingMode = DraggingMode.NONE;
     private Point pressPoint;
     private Point2D pressWorldPoint;
+        
+    /**
+     * コンストラクタ
+     * @param view ビューオブジェクト
+     * @param model モデルオブジェクト
+     */
 
-    // マウスリスナーの登録
     public Controller(View view, Model model) {
         this.view = view;
         this.model = model;
@@ -53,7 +71,6 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     public void mouseClicked(MouseEvent e_click) {
         Point clickedpoint = e_click.getPoint();
         Point2D worldClicked = view.screenToWorld(clickedpoint);
-        System.out.println("クリック：" + clickedpoint);
         Point2D pinionCenter = model.getPinionGearPosition();
         double distance = worldClicked.distance(pinionCenter);
         double radius = model.getPinionGearRadius();
@@ -67,8 +84,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
 
     public void mousePressed(MouseEvent e_press) {
         Point pressedPoint = e_press.getPoint();
-        System.out.println("プレス：" + pressedPoint);
-        pressWorldPoint = view.screenToWorld(pressedPoint);
+        Point2D pressWorldPoint = view.screenToWorld(pressedPoint);
 
         Point2D spurCenter = model.getSpurGearPosition();
         double spurRadius = model.getSpurGearRadius();
@@ -99,8 +115,8 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     public void mouseDragged(MouseEvent e_drag) {
         Point currentPoint = e_drag.getPoint();
         this.pressPoint = currentPoint;
-        System.out.println("ドラッグ：" + currentPoint);
         Point2D currentWorld = view.screenToWorld(currentPoint);
+        this.pressWorldPoint = currentWorld;
         double dx = currentWorld.getX() - pressWorldPoint.getX();
         double dy = currentWorld.getY() - pressWorldPoint.getY();
 
@@ -116,15 +132,32 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
                 break;
 
             case MOVE_PINION:
-                Point2D.Double newCenter = new Point2D.Double(
-                    model.getSpurGearPosition().getX() + (currentWorld.getX() - model.getSpurGearPosition().getX()),
-                    model.getSpurGearPosition().getY() + (currentWorld.getY() - model.getSpurGearPosition().getY())
-                );
-                double newPinionRadius = newCenter.distance(model.getSpurGearPosition());
+                Point2D spurCenter = model.getSpurGearPosition();
+                double spurRadius = model.getSpurGearRadius();
+
+                double dxRaw = currentWorld.getX() - spurCenter.getX();
+                double dyRaw = currentWorld.getY() - spurCenter.getY();
+                double dist = Math.hypot(dxRaw, dyRaw);
+                if (dist >= spurRadius) break; // ピニオンが外に飛び出すのを防ぐ
+
+                // 新しいピニオン半径：スパー半径 - 中心間距離
+                double newPinionRadius = spurRadius - dist;
+                if (newPinionRadius < 1.0) newPinionRadius = 1.0; // 最小値を制限
+
+                // 単位ベクトル
+                double unitX = dxRaw / dist;
+                double unitY = dyRaw / dist;
+
+                // 新しいピニオン中心
+                double newCenterX = spurCenter.getX() + unitX * dist;
+                double newCenterY = spurCenter.getY() + unitY * dist;
+                Point2D.Double newCenter = new Point2D.Double(newCenterX, newCenterY);
+
+                // モデル更新
                 model.setPinionGearPosition(newCenter);
                 model.changePinionGearRadius(newPinionRadius);
+
                 model.movePenBy(dx, dy);
-                break;
 
             case PAN:
                 int panDx = currentPoint.x - pressPoint.x;
@@ -142,6 +175,8 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         model.mouseDragged(currentPoint);
     }
 }
+
+/*   */
 
 /*
  * public void mouseMoved(MouseEvent e_cursor) {
