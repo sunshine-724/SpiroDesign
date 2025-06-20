@@ -45,9 +45,9 @@ public class SpurGear extends SpiroGear {
     }
 
     /**
-     * スパーギアの位置を返すメソッド。
+     * スパーギアの半径を返すメソッド。
      * 
-     * @param position 新しい位置
+     * @return ギアの半径
      */
     public double getSpurRadius() {
         return radius;
