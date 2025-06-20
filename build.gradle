@@ -17,3 +17,18 @@ dependencies {
 test {
     useJUnitPlatform()
 }
+
+tasks.register('javadocSpiroDesign', Javadoc) {
+    destinationDir = file("$buildDir/docs/javadocSpiroDesign")
+
+    source = fileTree("src/main/java/org/example") {
+        include '**/*.java'
+    }
+    classpath = sourceSets.main.compileClasspath
+
+    options.encoding = 'UTF-8'
+    options.charSet = 'UTF-8'
+    options.author = true
+    options.version = true
+    options.links("https://docs.oracle.com/javase/8/docs/api/")
+}

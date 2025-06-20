@@ -1,9 +1,6 @@
 package org.example.controller;
 
-import java.awt.Component;
-import java.awt.Cursor;
 import java.awt.Point;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
@@ -18,7 +15,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     protected Model model;
     protected View view;
 
-    // 変数の定義
+    // モードの定義
     private enum DraggingMode {
         NONE,
         MOVE_SPUR_CENTER,
@@ -56,6 +53,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
     public void mouseClicked(MouseEvent e_click) {
         Point clickedpoint = e_click.getPoint();
         Point2D worldClicked = view.screenToWorld(clickedpoint);
+        System.out.println("クリック：" + clickedpoint);
         Point2D pinionCenter = model.getPinionGearPosition();
         double distance = worldClicked.distance(pinionCenter);
         double radius = model.getPinionGearRadius();
@@ -69,7 +67,8 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
 
     public void mousePressed(MouseEvent e_press) {
         Point pressedPoint = e_press.getPoint();
-        pressWorldPoint = view.screenToWorld(pressPoint);
+        System.out.println("プレス：" + pressedPoint);
+        pressWorldPoint = view.screenToWorld(pressedPoint);
 
         Point2D spurCenter = model.getSpurGearPosition();
         double spurRadius = model.getSpurGearRadius();
@@ -84,7 +83,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         } else if (Math.abs(distToSpur - spurRadius) < 10) {
             draggingMode = DraggingMode.RESIZE_SPUR_RADIUS;
         } else if (distToPinion < 10) {
-            draggingMode = draggingMode.MOVE_PINION;
+            draggingMode = DraggingMode.MOVE_PINION;
         } else {
             draggingMode = DraggingMode.PAN;
         }
@@ -99,6 +98,8 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
 
     public void mouseDragged(MouseEvent e_drag) {
         Point currentPoint = e_drag.getPoint();
+        this.pressPoint = currentPoint;
+        System.out.println("ドラッグ：" + currentPoint);
         Point2D currentWorld = view.screenToWorld(currentPoint);
         double dx = currentWorld.getX() - pressWorldPoint.getX();
         double dy = currentWorld.getY() - pressWorldPoint.getY();
@@ -106,8 +107,6 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         switch (draggingMode) {
             case MOVE_SPUR_CENTER:
                 model.moveSpurGearBy(dx, dy);
-                model.movePinionGearBy(dx, dy);
-                model.movePenBy(dx, dy);
                 break;
 
             case RESIZE_SPUR_RADIUS:
@@ -117,13 +116,14 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
                 break;
 
             case MOVE_PINION:
-                Point2D newCenter = new Point2D.Double(
+                Point2D.Double newCenter = new Point2D.Double(
                     model.getSpurGearPosition().getX() + (currentWorld.getX() - model.getSpurGearPosition().getX()),
                     model.getSpurGearPosition().getY() + (currentWorld.getY() - model.getSpurGearPosition().getY())
                 );
                 double newPinionRadius = newCenter.distance(model.getSpurGearPosition());
                 model.setPinionGearPosition(newCenter);
                 model.changePinionGearRadius(newPinionRadius);
+                model.movePenBy(dx, dy);
                 break;
 
             case PAN:
@@ -135,8 +135,9 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
             default:
                 break;
         }
-        pressPoint = currentPoint;
-        pressWorldPoint = currentWorld;
+
+        this.pressPoint = currentPoint;
+        this.pressWorldPoint = currentWorld;
         view.repaint();
         model.mouseDragged(currentPoint);
     }
