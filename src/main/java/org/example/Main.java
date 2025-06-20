@@ -4,9 +4,23 @@ import javax.swing.JFrame;
 import org.example.model.Model;
 import org.example.controller.Controller;
 import org.example.view.View;
-import java.awt.BorderLayout; // BorderLayout を使用する場合にインポート
+import java.awt.BorderLayout;
 
+/**
+ * Spirographアプリケーションのエントリーポイントとなるクラス
+ */
 public class Main {
+    /**
+     * デフォルトコンストラクタ。
+     */
+    public Main() {
+        // デフォルトコンストラクタ
+    }
+
+    /**
+     * アプリケーションのエントリーポイントです。
+     * @param args コマンドライン引数（未使用）
+     */
     public static void main(String[] args) {
         // Swing GUI の操作は、イベントディスパッチスレッド (EDT) で行うことが推奨される。
         // これにより、スレッドセーフティが確保され、GUI の応答性が向上する。
