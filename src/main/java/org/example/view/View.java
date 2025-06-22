@@ -674,4 +674,11 @@ public class View extends JPanel {
 
     /** ペン先表示フラグ */
     private boolean showPenTip = true;
+
+    /**
+     * ピニオンギアが動いたときにペン先を非表示にする
+     */
+    public void onPinionMoved() {
+        hidePenTip();
+    }
 }
