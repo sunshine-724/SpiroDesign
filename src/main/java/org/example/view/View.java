@@ -23,6 +23,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import javax.swing.JPopupMenu;
 import javax.swing.BoxLayout;
+import java.awt.Cursor;
 
 /**
  * スピログラフアプリケーションのViewクラス。
@@ -78,6 +79,17 @@ public class View extends JPanel {
     private Timer messageTimer;
     private static final int MESSAGE_DISPLAY_DURATION = 2000;
 
+    /** メニューボタンリスナーインターフェース */
+    public interface MenuButtonListener {
+        void onMenuButtonClicked(String buttonName);
+    }
+    private MenuButtonListener menuButtonListener;
+
+    /** メニューボタンリスナーを登録 */
+    public void setMenuButtonListener(MenuButtonListener listener) {
+        this.menuButtonListener = listener;
+    }
+
     /**
      * Viewのコンストラクタ
      * @param model Modelインスタンス
@@ -100,6 +112,12 @@ public class View extends JPanel {
             JButton button = new JButton(name);
             subButton.put(name, button);
             menuContentPanel.add(button);
+            // ボタンにアクションリスナーを追加
+            button.addActionListener(e -> {
+                if (menuButtonListener != null) {
+                    menuButtonListener.onMenuButtonClicked(name);
+                }
+            });
         }
 
         String[] penSizes = { "Small", "Medium", "Large" };
@@ -107,6 +125,12 @@ public class View extends JPanel {
             JButton button = new JButton(size);
             penSizeDisplay.put(size, button);
             menuContentPanel.add(button);
+            // ペンサイズボタンにもアクションリスナーを追加
+            button.addActionListener(e -> {
+                if (menuButtonListener != null) {
+                    menuButtonListener.onMenuButtonClicked(size);
+                }
+            });
         }
 
         speedDisplay = new JTextField("0.0");
@@ -174,7 +198,7 @@ public class View extends JPanel {
 
         Point2D.Double penPosition = model.getPenPosition();
         Color penColor = model.getPenColor();
-        if (penPosition != null) {
+        if (penPosition != null && showPenTip) {
             displayDrawPen(g2d, penPosition, penColor);
         }
 
@@ -610,4 +634,44 @@ public class View extends JPanel {
         viewOffset.y += dy;
         repaint();
     }
+
+    /**
+     * マウス位置に応じてカーソル形状を更新する
+     * @param mousePoint スクリーン座標でのマウス位置
+     */
+    public void updateCursor(Point mousePoint) {
+        Point2D world = screenToWorld(mousePoint);
+
+        // スパーギア中心
+        Point2D spurCenter = model.getSpurGearPosition();
+        double spurRadius = model.getSpurGearRadius();
+        // ピニオンギア中心
+        Point2D pinionCenter = model.getPinionGearPosition();
+        double pinionRadius = model.getPinionGearRadius();
+
+        if (spurCenter != null && world.distance(spurCenter) < 10) {
+            setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+        } else if (spurCenter != null && Math.abs(world.distance(spurCenter) - spurRadius) < 10) {
+            setCursor(Cursor.getPredefinedCursor(Cursor.SE_RESIZE_CURSOR));
+        } else if (pinionCenter != null && world.distance(pinionCenter) < 10) {
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        } else {
+            setCursor(Cursor.getDefaultCursor());
+        }
+    }
+
+    /** ペン先を非表示にする */
+    public void hidePenTip() {
+        showPenTip = false;
+        repaint();
+    }
+
+    /** ペン先を表示する */
+    public void showPenTip() {
+        showPenTip = true;
+        repaint();
+    }
+
+    /** ペン先表示フラグ */
+    private boolean showPenTip = true;
 }
