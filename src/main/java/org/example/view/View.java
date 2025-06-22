@@ -358,6 +358,21 @@ public class View extends JPanel {
     }
 
     /**
+     * スパーギアとピニオンギアの半径を連動して変更する
+     * @param newSpurRadius 新しいスパーギア半径
+     */
+    public void changeSpurAndPinionRadius(double newSpurRadius) {
+        double oldSpurRadius = model.getSpurGearRadius();
+        double oldPinionRadius = model.getPinionGearRadius();
+        if (oldSpurRadius == 0) return; // 0除算防止
+        double ratio = newSpurRadius / oldSpurRadius;
+        double newPinionRadius = oldPinionRadius * ratio;
+        model.setSpurRadius(newSpurRadius);
+        model.changePinionGearRadius(newPinionRadius);
+        repaint();
+    }
+
+    /**
      * 拡大縮小
      * @param zoomIn trueで拡大、falseで縮小
      */
@@ -366,6 +381,11 @@ public class View extends JPanel {
         double newScale = scale + scaleChange;
 
         if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
+            // スパーギアとピニオンギアの半径も連動して変更
+            double oldSpurRadius = model.getSpurGearRadius();
+            double newSpurRadius = oldSpurRadius * (1 + scaleChange);
+            changeSpurAndPinionRadius(newSpurRadius);
+
             scale = newScale;
             repaint();
         }
