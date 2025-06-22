@@ -23,6 +23,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import javax.swing.JPopupMenu;
 import javax.swing.BoxLayout;
+import java.awt.Cursor;
 
 /**
  * スピログラフアプリケーションのViewクラス。
@@ -589,5 +590,33 @@ public class View extends JPanel {
         viewOffset.x += dx;
         viewOffset.y += dy;
         repaint();
+    }
+
+    /**
+     * マウス座標に応じてカーソル形状を変更する
+     * @param mousePoint スクリーン座標
+     */
+    public void updateCursor(Point mousePoint) {
+        if (model == null) {
+            setCursor(Cursor.getDefaultCursor());
+            return;
+        }
+        Point2D worldPoint = screenToWorld(mousePoint);
+        Point2D spurCenter = model.getSpurGearPosition();
+        double spurRadius = model.getSpurGearRadius();
+        Point2D pinionCenter = model.getPinionGearPosition();
+
+        double distToSpur = spurCenter != null ? worldPoint.distance(spurCenter) : Double.MAX_VALUE;
+        double distToPinion = pinionCenter != null ? worldPoint.distance(pinionCenter) : Double.MAX_VALUE;
+
+        if (distToSpur < 10) {
+            setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+        } else if (Math.abs(distToSpur - spurRadius) < 10) {
+            setCursor(Cursor.getPredefinedCursor(Cursor.SE_RESIZE_CURSOR));
+        } else if (distToPinion < 10) {
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        } else {
+            setCursor(Cursor.getDefaultCursor());
+        }
     }
 }
