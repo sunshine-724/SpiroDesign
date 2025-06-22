@@ -141,6 +141,16 @@ public class Model {
     }
 
     /**
+     * Viewに半径の変更があったことを通知します
+     * @param newRadius
+     */
+    private void notifiyViewsChangeAndPinionRadius(double newRadius){
+        for (View view : views){
+            view.changeSpurAndPinionRadius(newRadius);
+        }
+    }
+
+    /**
      * Viewにデータの更新を通知するためにリスナーを追加します。(Observerパターン)
      * 
      * @param view 通知を受け取るViewのインスタンス
@@ -218,6 +228,7 @@ public class Model {
 
     public void changeSpurGearRadius(Double radius) {
         spurGear.changeRadius(radius);
+        notifiyViewsChangeAndPinionRadius(radius);
     }
 
     /**
@@ -284,6 +295,7 @@ public class Model {
 
     public void setSpurRadius(double radius) {
         spurGear.changeRadius(radius);
+        notifiyViewsChangeAndPinionRadius(radius);
     }
 
     /**
