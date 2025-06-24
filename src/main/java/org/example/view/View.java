@@ -150,15 +150,16 @@ public class View extends JPanel {
         });
         MenuDisplay.add(chooseColorItem);
 
-        // --- 新しいサブメニュー「形状」を追加 ---
-        JMenu shapeMenu = new JMenu("形状");
-        String[] shapes = { "円", "四角", "多角形" };
-        for (String shapeName : shapes) {
-            JMenuItem item = new JMenuItem(shapeName);
-            item.addActionListener(commonMenuListener);
-            shapeMenu.add(item);
-        }
-        MenuDisplay.add(shapeMenu);
+        // --- 新しいサブメニュー「形状」を削除 ---
+        // 以下のコードブロックを削除しました:
+        // JMenu shapeMenu = new JMenu("形状");
+        // String[] shapes = { "円", "四角", "多角形" };
+        // for (String shapeName : shapes) {
+        //     JMenuItem item = new JMenuItem(shapeName);
+        //     item.addActionListener(commonMenuListener);
+        //     shapeMenu.add(item);
+        // }
+        // MenuDisplay.add(shapeMenu);
 
         // 以下は、JPopupMenuに直接含めない要素のため、別途メインUIに配置されることを想定
         speedDisplay = new JTextField("0.0");
