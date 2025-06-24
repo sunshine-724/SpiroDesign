@@ -28,6 +28,11 @@ import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import java.awt.event.ActionListener;
 import javax.swing.SwingUtilities; // SwingUtilitiesをインポート
+import javax.swing.JSlider; // JSliderをインポート
+import javax.swing.event.ChangeEvent; // ChangeEventをインポート
+import javax.swing.event.ChangeListener; // ChangeListenerをインポート
+import javax.swing.JLabel; // JLabelをインポート
+import java.util.Hashtable; // Hashtableをインポート
 
 /**
  * スピログラフアプリケーションのViewクラス。
@@ -87,6 +92,7 @@ public class View extends JPanel {
     public interface MenuButtonListener {
         void onMenuButtonClicked(String buttonName);
         void onColorSelected(Color color); // 色選択イベントを追加
+        void onSpeedSelected(double speed); // スピード選択イベントを追加
     }
     private MenuButtonListener menuButtonListener;
 
@@ -114,7 +120,10 @@ public class View extends JPanel {
         ActionListener commonMenuListener = e -> {
             if (menuButtonListener != null) {
                 JMenuItem source = (JMenuItem) e.getSource();
-                menuButtonListener.onMenuButtonClicked(source.getText());
+                String command = source.getText();
+                // スピード選択のコマンドはJSliderのChangeListenerで直接処理されるため、ここでは不要
+                // その他の通常のメニューコマンドを処理
+                menuButtonListener.onMenuButtonClicked(command);
             }
         };
 
@@ -150,16 +159,59 @@ public class View extends JPanel {
         });
         MenuDisplay.add(chooseColorItem);
 
-        // --- 新しいサブメニュー「形状」を削除 ---
-        // 以下のコードブロックを削除しました:
-        // JMenu shapeMenu = new JMenu("形状");
-        // String[] shapes = { "円", "四角", "多角形" };
-        // for (String shapeName : shapes) {
-        //     JMenuItem item = new JMenuItem(shapeName);
-        //     item.addActionListener(commonMenuListener);
-        //     shapeMenu.add(item);
-        // }
-        // MenuDisplay.add(shapeMenu);
+        // --- スピード選択用JSliderを追加 ---
+        MenuDisplay.addSeparator(); // 区切り線を追加
+
+        // スライダーとラベルを格納するためのパネル
+        JPanel speedPanel = new JPanel();
+        speedPanel.setLayout(new BoxLayout(speedPanel, BoxLayout.Y_AXIS)); // 垂直方向に要素を配置
+
+        JLabel speedLabel = new JLabel("スピード:");
+        speedLabel.setAlignmentX(CENTER_ALIGNMENT); // パネル内で中央揃え
+
+        // 初期速度をモデルから取得（ModelにgetSpeed()のようなメソッドがあればそれを使うべき）
+        // 現状、ModelクラスにはPinionGearのspeedを直接取得するpublicメソッドがないため、
+        // Model内のPinionGearインスタンスを直接参照するか、Modelにgetterを追加する必要があります。
+        // ここでは便宜上、model.pinionGear.speedを使用します。
+        // ※ もしpinionGearがprivateでgetterがない場合は、ModelにgetPinionGearSpeed()などのgetterを追加してください。
+        int initialSpeed = (int) model.getPinionGearPosition().distance(model.getSpurGearPosition()); // 仮の初期値としてギア間の距離を使用。適切な速度の初期値を設定してください。
+        if (initialSpeed < 1) initialSpeed = 1;
+        if (initialSpeed > 100) initialSpeed = 100;
+
+
+        JSlider speedSlider = new JSlider(JSlider.HORIZONTAL, 1, 100, initialSpeed);
+        // 主要な目盛り間隔と細かい目盛り間隔の設定を削除
+        // speedSlider.setMajorTickSpacing(10);
+        // speedSlider.setMinorTickSpacing(1);
+        speedSlider.setPaintTicks(true);     // 目盛りを表示
+        // speedSlider.setPaintLabels(true);    // 目盛りの数値ラベルを表示（カスタムラベルを使用するため）
+        speedSlider.setSnapToTicks(true);    // 目盛りにスナップさせる
+
+        // カスタムラベルテーブルを作成
+        Hashtable<Integer, JLabel> labelTable = new Hashtable<>();
+        labelTable.put(1, new JLabel("1"));
+        labelTable.put(100, new JLabel("100"));
+        speedSlider.setLabelTable(labelTable); // カスタムラベルを設定
+        speedSlider.setPaintLabels(true);      // ラベルを表示
+
+        // スライダーの値が変更されたときのリスナー
+        speedSlider.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                // getValueIsAdjusting()は、ユーザーがスライダーをドラッグ中の間はtrueを返す
+                // ドラッグが終了したときにのみイベントを処理する場合
+                if (!speedSlider.getValueIsAdjusting()) {
+                    if (menuButtonListener != null) {
+                        menuButtonListener.onSpeedSelected(speedSlider.getValue());
+                    }
+                }
+            }
+        });
+
+        speedPanel.add(speedLabel);
+        speedPanel.add(speedSlider);
+
+        MenuDisplay.add(speedPanel); // パネルをポップアップメニューに追加
 
         // 以下は、JPopupMenuに直接含めない要素のため、別途メインUIに配置されることを想定
         speedDisplay = new JTextField("0.0");
@@ -613,7 +665,7 @@ public class View extends JPanel {
     public void setLocusData(List<Point2D.Double> locus, Color penColor, double penSize) {
         this.loadedLocusData = locus;
         this.loadedPenColor = penColor;
-        this.loadedPenSize = penSize;
+        this.loadedPenSize = -1.0;
         repaint();
     }
 
