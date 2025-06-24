@@ -338,7 +338,22 @@ public class View extends JPanel {
         g.setStroke(new BasicStroke((float) penSize));
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        g.fillOval((int) (position.x - penSize / 2), (int) (position.y - penSize / 2), (int) penSize, (int) penSize);
+        // --- 修正: ペンとギアの中心が重ならないように描画 ---
+        // ピニオンギアの中心・半径・角度を取得
+        Point2D.Double pinionCenter = model.getPinionGearPosition();
+        double pinionRadius = model.getPinionGearRadius();
+
+        // ペンの角度を推定（中心からペン座標への角度を利用）
+        double theta = 0.0;
+        if (pinionCenter != null && position != null) {
+            theta = Math.atan2(position.y - pinionCenter.y, position.x - pinionCenter.x);
+        }
+
+        // ペンの中心をギアの中心から pinionRadius + penSize/2 だけ離す
+        double penX = pinionCenter.x + (pinionRadius + penSize / 2.0) * Math.cos(theta);
+        double penY = pinionCenter.y + (pinionRadius + penSize / 2.0) * Math.sin(theta);
+
+        g.fillOval((int) (penX - penSize / 2), (int) (penY - penSize / 2), (int) penSize, (int) penSize);
 
         g.setColor(originalColor);
         g.setStroke(originalStroke);
