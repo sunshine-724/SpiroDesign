@@ -24,6 +24,15 @@ import java.awt.FontMetrics;
 import javax.swing.JPopupMenu;
 import javax.swing.BoxLayout;
 import java.awt.Cursor;
+import javax.swing.JMenu;
+import javax.swing.JMenuItem;
+import java.awt.event.ActionListener;
+import javax.swing.SwingUtilities; // SwingUtilitiesをインポート
+import javax.swing.JSlider; // JSliderをインポート
+import javax.swing.event.ChangeEvent; // ChangeEventをインポート
+import javax.swing.event.ChangeListener; // ChangeListenerをインポート
+import javax.swing.JLabel; // JLabelをインポート
+import java.util.Hashtable; // Hashtableをインポート
 
 /**
  * スピログラフアプリケーションのViewクラス。
@@ -35,14 +44,14 @@ public class View extends JPanel {
 
     /** メニュー表示用ポップアップ */
     public JPopupMenu MenuDisplay;
-    /** サブボタン群 */
-    public Map<String, JButton> subButton;
+    /** サブボタン群 (JPopupMenuにはJMenuItemを追加するため、このマップは別の用途で使うか、見直す必要がある) */
+    public Map<String, JButton> subButton; // このマップは現在JPopupMenuに直接は使われない
     /** 速度表示・入力欄 */
-    public JTextField speedDisplay;
-    /** ペンサイズ選択ボタン群 */
-    public Map<String, JButton> penSizeDisplay;
-    /** カラーパレット */
-    public JColorChooser colorPalletDisplay;
+    public JTextField speedDisplay; // JPopupMenuには直接含めない
+    /** ペンサイズ選択ボタン群 (JPopupMenuにはJMenuItemを追加するため、このマップは別の用途で使うか、見直す必要がある) */
+    public Map<String, JButton> penSizeDisplay; // このマップは現在JPopupMenuに直接は使われない
+    /** カラーパレット (ダイアログとして使用) */
+    public JColorChooser colorPalletDisplay; // ダイアログ表示に利用
 
     /** 拡大縮小率 */
     private double scale = 1.0;
@@ -82,8 +91,13 @@ public class View extends JPanel {
     /** メニューボタンリスナーインターフェース */
     public interface MenuButtonListener {
         void onMenuButtonClicked(String buttonName);
+        void onColorSelected(Color color); // 色選択イベントを追加
+        void onSpeedSelected(double speed); // スピード選択イベントを追加
     }
     private MenuButtonListener menuButtonListener;
+
+    /** ペン先表示フラグ */
+    private boolean showPenTip = true;
 
     /** メニューボタンリスナーを登録 */
     public void setMenuButtonListener(MenuButtonListener listener) {
@@ -101,46 +115,110 @@ public class View extends JPanel {
         setBackground(Color.WHITE);
 
         MenuDisplay = new JPopupMenu();
-        JPanel menuContentPanel = new JPanel();
-        menuContentPanel.setLayout(new BoxLayout(menuContentPanel, BoxLayout.Y_AXIS));
 
-        subButton = new HashMap<>();
-        penSizeDisplay = new HashMap<>();
+        // MenuButtonListenerを介してアクションを処理する共通のActionListener
+        ActionListener commonMenuListener = e -> {
+            if (menuButtonListener != null) {
+                JMenuItem source = (JMenuItem) e.getSource();
+                String command = source.getText();
+                // スピード選択のコマンドはJSliderのChangeListenerで直接処理されるため、ここでは不要
+                // その他の通常のメニューコマンドを処理
+                menuButtonListener.onMenuButtonClicked(command);
+            }
+        };
 
-        String[] buttonNames = { "Pen", "SpurGear", "PinionGear", "Start", "Stop", "Clear", "Save", "Load" };
-        for (String name : buttonNames) {
-            JButton button = new JButton(name);
-            subButton.put(name, button);
-            menuContentPanel.add(button);
-            // ボタンにアクションリスナーを追加
-            button.addActionListener(e -> {
-                if (menuButtonListener != null) {
-                    menuButtonListener.onMenuButtonClicked(name);
-                }
-            });
+        // --- メインボタン群をJMenuItemとしてJPopupMenuに追加 ---
+        String[] mainButtonNames = { "Start", "Stop", "Clear", "Save", "Load" };
+        for (String name : mainButtonNames) {
+            JMenuItem item = new JMenuItem(name);
+            item.addActionListener(commonMenuListener);
+            MenuDisplay.add(item);
         }
 
+        MenuDisplay.addSeparator(); // 区切り線を追加
+
+        // --- ペンサイズをPenSizeサブメニューにまとめる ---
+        JMenu penSizeMenu = new JMenu("PenSize");
         String[] penSizes = { "Small", "Medium", "Large" };
         for (String size : penSizes) {
-            JButton button = new JButton(size);
-            penSizeDisplay.put(size, button);
-            menuContentPanel.add(button);
-            // ペンサイズボタンにもアクションリスナーを追加
-            button.addActionListener(e -> {
-                if (menuButtonListener != null) {
-                    menuButtonListener.onMenuButtonClicked(size);
-                }
-            });
+            JMenuItem item = new JMenuItem(size);
+            item.addActionListener(commonMenuListener);
+            penSizeMenu.add(item);
         }
+        MenuDisplay.add(penSizeMenu);
 
+        // --- カラーパレット表示メニュー項目を追加 ---
+        JMenuItem chooseColorItem = new JMenuItem("色を選択...");
+        chooseColorItem.addActionListener(e -> {
+            Color newColor = JColorChooser.showDialog(View.this, "色を選択", model.getPenColor());
+            if (newColor != null) {
+                if (menuButtonListener != null) {
+                    menuButtonListener.onColorSelected(newColor); // 新しい色をリスナーに通知
+                }
+            }
+        });
+        MenuDisplay.add(chooseColorItem);
+
+        // --- スピード選択用JSliderを追加 ---
+        MenuDisplay.addSeparator(); // 区切り線を追加
+
+        // スライダーとラベルを格納するためのパネル
+        JPanel speedPanel = new JPanel();
+        speedPanel.setLayout(new BoxLayout(speedPanel, BoxLayout.Y_AXIS)); // 垂直方向に要素を配置
+
+        JLabel speedLabel = new JLabel("スピード:");
+        speedLabel.setAlignmentX(CENTER_ALIGNMENT); // パネル内で中央揃え
+
+        // 初期速度をモデルから取得（ModelにgetSpeed()のようなメソッドがあればそれを使うべき）
+        // 現状、ModelクラスにはPinionGearのspeedを直接取得するpublicメソッドがないため、
+        // Model内のPinionGearインスタンスを直接参照するか、Modelにgetterを追加する必要があります。
+        // ここでは便宜上、model.pinionGear.speedを使用します。
+        // ※ もしpinionGearがprivateでgetterがない場合は、ModelにgetPinionGearSpeed()などのgetterを追加してください。
+        int initialSpeed = (int) model.getPinionGearPosition().distance(model.getSpurGearPosition()); // 仮の初期値としてギア間の距離を使用。適切な速度の初期値を設定してください。
+        if (initialSpeed < 1) initialSpeed = 1;
+        if (initialSpeed > 100) initialSpeed = 100;
+
+
+        JSlider speedSlider = new JSlider(JSlider.HORIZONTAL, 1, 100, initialSpeed);
+        // 主要な目盛り間隔と細かい目盛り間隔の設定を削除
+        // speedSlider.setMajorTickSpacing(10);
+        // speedSlider.setMinorTickSpacing(1);
+        speedSlider.setPaintTicks(true);     // 目盛りを表示
+        // speedSlider.setPaintLabels(true);    // 目盛りの数値ラベルを表示（カスタムラベルを使用するため）
+        speedSlider.setSnapToTicks(true);    // 目盛りにスナップさせる
+
+        // カスタムラベルテーブルを作成
+        Hashtable<Integer, JLabel> labelTable = new Hashtable<>();
+        labelTable.put(1, new JLabel("1"));
+        labelTable.put(100, new JLabel("100"));
+        speedSlider.setLabelTable(labelTable); // カスタムラベルを設定
+        speedSlider.setPaintLabels(true);      // ラベルを表示
+
+        // スライダーの値が変更されたときのリスナー
+        speedSlider.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                // getValueIsAdjusting()は、ユーザーがスライダーをドラッグ中の間はtrueを返す
+                // ドラッグが終了したときにのみイベントを処理する場合
+                if (!speedSlider.getValueIsAdjusting()) {
+                    if (menuButtonListener != null) {
+                        menuButtonListener.onSpeedSelected(speedSlider.getValue());
+                    }
+                }
+            }
+        });
+
+        speedPanel.add(speedLabel);
+        speedPanel.add(speedSlider);
+
+        MenuDisplay.add(speedPanel); // パネルをポップアップメニューに追加
+
+        // 以下は、JPopupMenuに直接含めない要素のため、別途メインUIに配置されることを想定
         speedDisplay = new JTextField("0.0");
         speedDisplay.setEditable(true);
-        menuContentPanel.add(speedDisplay);
 
+        // JColorChooserのインスタンスは残しておくが、直接JPopupMenuには追加しない
         colorPalletDisplay = new JColorChooser();
-        menuContentPanel.add(colorPalletDisplay);
-
-        MenuDisplay.add(menuContentPanel);
 
         setVisible(true);
 
@@ -338,22 +416,7 @@ public class View extends JPanel {
         g.setStroke(new BasicStroke((float) penSize));
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // --- 修正: ペンとギアの中心が重ならないように描画 ---
-        // ピニオンギアの中心・半径・角度を取得
-        Point2D.Double pinionCenter = model.getPinionGearPosition();
-        double pinionRadius = model.getPinionGearRadius();
-
-        // ペンの角度を推定（中心からペン座標への角度を利用）
-        double theta = 0.0;
-        if (pinionCenter != null && position != null) {
-            theta = Math.atan2(position.y - pinionCenter.y, position.x - pinionCenter.x);
-        }
-
-        // ペンの中心をギアの中心から pinionRadius + penSize/2 だけ離す
-        double penX = pinionCenter.x + (pinionRadius + penSize / 2.0) * Math.cos(theta);
-        double penY = pinionCenter.y + (pinionRadius + penSize / 2.0) * Math.sin(theta);
-
-        g.fillOval((int) (penX - penSize / 2), (int) (penY - penSize / 2), (int) penSize, (int) penSize);
+        g.fillOval((int) (position.x - penSize / 2), (int) (position.y - penSize / 2), (int) penSize, (int) penSize);
 
         g.setColor(originalColor);
         g.setStroke(originalStroke);
@@ -602,7 +665,7 @@ public class View extends JPanel {
     public void setLocusData(List<Point2D.Double> locus, Color penColor, double penSize) {
         this.loadedLocusData = locus;
         this.loadedPenColor = penColor;
-        this.loadedPenSize = penSize;
+        this.loadedPenSize = -1.0;
         repaint();
     }
 
@@ -685,15 +748,5 @@ public class View extends JPanel {
     public void showPenTip() {
         showPenTip = true;
         repaint();
-    }
-
-    /** ペン先表示フラグ */
-    private boolean showPenTip = true;
-
-    /**
-     * ピニオンギアが動いたときにペン先を非表示にする
-     */
-    public void onPinionMoved() {
-        hidePenTip();
     }
 }
