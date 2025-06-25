@@ -27,12 +27,13 @@ import java.awt.Cursor;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import java.awt.event.ActionListener;
-import javax.swing.SwingUtilities; // SwingUtilitiesをインポート
-import javax.swing.JSlider; // JSliderをインポート
-import javax.swing.event.ChangeEvent; // ChangeEventをインポート
-import javax.swing.event.ChangeListener; // ChangeListenerをインポート
-import javax.swing.JLabel; // JLabelをインポート
-import java.util.Hashtable; // Hashtableをインポート
+import javax.swing.SwingUtilities;
+import javax.swing.JSlider;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.JLabel;
+import java.util.Hashtable;
+import java.text.DecimalFormat; // DecimalFormatをインポート
 
 /**
  * スピログラフアプリケーションのViewクラス。
@@ -44,19 +45,15 @@ public class View extends JPanel {
 
     /** メニュー表示用ポップアップ */
     public JPopupMenu MenuDisplay;
-    /** サブボタン群 (JPopupMenuにはJMenuItemを追加するため、このマップは別の用途で使うか、見直す必要がある) */
-    public Map<String, JButton> subButton; // このマップは現在JPopupMenuに直接は使われない
     /** 速度表示・入力欄 */
-    public JTextField speedDisplay; // JPopupMenuには直接含めない
-    /** ペンサイズ選択ボタン群 (JPopupMenuにはJMenuItemを追加するため、このマップは別の用途で使うか、見直す必要がある) */
-    public Map<String, JButton> penSizeDisplay; // このマップは現在JPopupMenuに直接は使われない
+    public JTextField speedDisplay;
     /** カラーパレット (ダイアログとして使用) */
-    public JColorChooser colorPalletDisplay; // ダイアログ表示に利用
+    public JColorChooser colorPalletDisplay;
 
     /** 拡大縮小率 */
     private double scale = 1.0;
-    private static final double MIN_SCALE = 0.5;
-    private static final double MAX_SCALE = 2.0;
+    private static final double MIN_SCALE = 0.1; // 最小スケールをより小さく設定
+    private static final double MAX_SCALE = 5.0; // 最大スケールをより大きく設定
 
     /** ビューのオフセット（パン用） */
     private Point2D.Double viewOffset = new Point2D.Double(0, 0);
@@ -91,13 +88,16 @@ public class View extends JPanel {
     /** メニューボタンリスナーインターフェース */
     public interface MenuButtonListener {
         void onMenuButtonClicked(String buttonName);
-        void onColorSelected(Color color); // 色選択イベントを追加
-        void onSpeedSelected(double speed); // スピード選択イベントを追加
+        void onColorSelected(Color color);
+        void onSpeedSelected(double speed);
     }
     private MenuButtonListener menuButtonListener;
 
     /** ペン先表示フラグ */
     private boolean showPenTip = true;
+
+    /** DecimalFormat for scale percentage display */
+    private DecimalFormat percentFormat = new DecimalFormat("0.0%");
 
     /** メニューボタンリスナーを登録 */
     public void setMenuButtonListener(MenuButtonListener listener) {
@@ -121,8 +121,6 @@ public class View extends JPanel {
             if (menuButtonListener != null) {
                 JMenuItem source = (JMenuItem) e.getSource();
                 String command = source.getText();
-                // スピード選択のコマンドはJSliderのChangeListenerで直接処理されるため、ここでは不要
-                // その他の通常のメニューコマンドを処理
                 menuButtonListener.onMenuButtonClicked(command);
             }
         };
@@ -169,37 +167,26 @@ public class View extends JPanel {
         JLabel speedLabel = new JLabel("スピード:");
         speedLabel.setAlignmentX(CENTER_ALIGNMENT); // パネル内で中央揃え
 
-        // 初期速度をモデルから取得（ModelにgetSpeed()のようなメソッドがあればそれを使うべき）
-        // 現状、ModelクラスにはPinionGearのspeedを直接取得するpublicメソッドがないため、
-        // Model内のPinionGearインスタンスを直接参照するか、Modelにgetterを追加する必要があります。
-        // ここでは便宜上、model.pinionGear.speedを使用します。
-        // ※ もしpinionGearがprivateでgetterがない場合は、ModelにgetPinionGearSpeed()などのgetterを追加してください。
-        int initialSpeed = (int) model.getPinionGearPosition().distance(model.getSpurGearPosition()); // 仮の初期値としてギア間の距離を使用。適切な速度の初期値を設定してください。
+        int initialSpeed = (int) model.getPinionGearSpeed(); // Modelから実際の速度を取得
         if (initialSpeed < 1) initialSpeed = 1;
         if (initialSpeed > 100) initialSpeed = 100;
 
 
         JSlider speedSlider = new JSlider(JSlider.HORIZONTAL, 1, 100, initialSpeed);
-        // 主要な目盛り間隔と細かい目盛り間隔の設定を削除
-        // speedSlider.setMajorTickSpacing(10);
-        // speedSlider.setMinorTickSpacing(1);
-        speedSlider.setPaintTicks(true);     // 目盛りを表示
-        // speedSlider.setPaintLabels(true);    // 目盛りの数値ラベルを表示（カスタムラベルを使用するため）
-        speedSlider.setSnapToTicks(true);    // 目盛りにスナップさせる
+        speedSlider.setPaintTicks(true);
+        speedSlider.setSnapToTicks(true);
 
         // カスタムラベルテーブルを作成
         Hashtable<Integer, JLabel> labelTable = new Hashtable<>();
         labelTable.put(1, new JLabel("1"));
         labelTable.put(100, new JLabel("100"));
-        speedSlider.setLabelTable(labelTable); // カスタムラベルを設定
-        speedSlider.setPaintLabels(true);      // ラベルを表示
+        speedSlider.setLabelTable(labelTable);
+        speedSlider.setPaintLabels(true);
 
         // スライダーの値が変更されたときのリスナー
         speedSlider.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
-                // getValueIsAdjusting()は、ユーザーがスライダーをドラッグ中の間はtrueを返す
-                // ドラッグが終了したときにのみイベントを処理する場合
                 if (!speedSlider.getValueIsAdjusting()) {
                     if (menuButtonListener != null) {
                         menuButtonListener.onSpeedSelected(speedSlider.getValue());
@@ -213,11 +200,9 @@ public class View extends JPanel {
 
         MenuDisplay.add(speedPanel); // パネルをポップアップメニューに追加
 
-        // 以下は、JPopupMenuに直接含めない要素のため、別途メインUIに配置されることを想定
         speedDisplay = new JTextField("0.0");
         speedDisplay.setEditable(true);
 
-        // JColorChooserのインスタンスは残しておくが、直接JPopupMenuには追加しない
         colorPalletDisplay = new JColorChooser();
 
         setVisible(true);
@@ -250,6 +235,7 @@ public class View extends JPanel {
 
         AffineTransform originalTransform = g2d.getTransform();
 
+        // ズームとパンを適用
         g2d.translate(viewOffset.x, viewOffset.y);
         g2d.scale(scale, scale);
 
@@ -285,6 +271,7 @@ public class View extends JPanel {
             Point2D.Double centerWorld = screenToWorld(spurGearCenterScreen);
             double tempRadius = 0;
             if (currentDragPointScreen != null) {
+                // スケールを考慮して半径を計算
                 tempRadius = spurGearCenterScreen.distance(currentDragPointScreen) / scale;
             }
 
@@ -300,6 +287,7 @@ public class View extends JPanel {
             Point2D.Double centerWorld = screenToWorld(pinionGearCenterScreen);
             double tempRadius = 0;
             if (currentDragPointScreenForPinion != null) {
+                // スケールを考慮して半径を計算
                 tempRadius = pinionGearCenterScreen.distance(currentDragPointScreenForPinion) / scale;
             }
 
@@ -310,11 +298,14 @@ public class View extends JPanel {
             g2d.drawOval((int) x, (int) y, (int) (tempRadius * 2), (int) (tempRadius * 2));
         }
 
+        // 元のTransformに戻す
         g2d.setTransform(originalTransform);
 
+        // スケール表示
         g2d.setColor(Color.BLACK);
         g2d.drawString("Scale: " + getScalePercent(), 10, getHeight() - 10);
 
+        // 保存メッセージ表示
         if (saveMessage != null) {
             drawSaveMessage(g2d);
         }
@@ -475,23 +466,43 @@ public class View extends JPanel {
     }
 
     /**
-     * 拡大縮小
-     * @param zoomIn trueで拡大、falseで縮小
+     * マウスカーソル位置を中心に拡大縮小する
+     * @param screenPoint スクリーン座標でのズーム中心点
+     * @param zoomFactor ズーム倍率
      */
-    public void scaling(boolean zoomIn) {
-        double scaleChange = zoomIn ? 0.1 : -0.1;
-        double newScale = scale + scaleChange;
+    public void zoomAt(Point screenPoint, double zoomFactor) {
+        // 現在のスクリーン座標での中心点をワールド座標に変換
+        Point2D.Double worldPointBeforeZoom = screenToWorld(screenPoint);
 
-        if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
-            // スパーギアとピニオンギアの半径も連動して変更
-            double oldSpurRadius = model.getSpurGearRadius();
-            double newSpurRadius = oldSpurRadius * (1 + scaleChange);
-            changeSpurAndPinionRadius(newSpurRadius);
-
-            scale = newScale;
-            repaint();
+        // 新しいスケールを計算し、範囲内に収める
+        double newScale = scale * zoomFactor;
+        if (newScale < MIN_SCALE) {
+            newScale = MIN_SCALE;
+        } else if (newScale > MAX_SCALE) {
+            newScale = MAX_SCALE;
         }
+
+        // スケールが変更されない場合は何もしない
+        if (newScale == scale) {
+            return;
+        }
+
+        // 新しいスケールを設定
+        scale = newScale;
+
+        // ズーム後のスクリーン座標での中心点
+        Point2D.Double screenPointAfterZoom = new Point2D.Double(
+            worldPointBeforeZoom.x * scale + viewOffset.x,
+            worldPointBeforeZoom.y * scale + viewOffset.y
+        );
+
+        // ズーム後のオフセットを計算
+        viewOffset.x += (screenPoint.x - screenPointAfterZoom.x);
+        viewOffset.y += (screenPoint.y - screenPointAfterZoom.y);
+
+        repaint();
     }
+
 
     /**
      * 現在のスケール値を取得
@@ -514,10 +525,10 @@ public class View extends JPanel {
 
     /**
      * スケール値をパーセント表記で取得
-     * @return 例: "100%"
+     * @return 例: "100.0%"
      */
     public String getScalePercent() {
-        return (int) (scale * 100) + "%";
+        return percentFormat.format(scale);
     }
 
     /**
@@ -552,8 +563,8 @@ public class View extends JPanel {
      * @return ワールド座標
      */
     public Point2D.Double screenToWorld(Point screenPoint) {
-        double worldX = (screenPoint.getX() / scale) - (viewOffset.x / scale);
-        double worldY = (screenPoint.getY() / scale) - (viewOffset.y / scale);
+        double worldX = (screenPoint.getX() - viewOffset.x) / scale;
+        double worldY = (screenPoint.getY() - viewOffset.y) / scale;
         return new Point2D.Double(worldX, worldY);
     }
 
@@ -665,7 +676,7 @@ public class View extends JPanel {
     public void setLocusData(List<Point2D.Double> locus, Color penColor, double penSize) {
         this.loadedLocusData = locus;
         this.loadedPenColor = penColor;
-        this.loadedPenSize = -1.0;
+        this.loadedPenSize = penSize; // ここを修正：-1.0ではなくpenSizeをセット
         repaint();
     }
 
@@ -727,11 +738,11 @@ public class View extends JPanel {
         Point2D pinionCenter = model.getPinionGearPosition();
         double pinionRadius = model.getPinionGearRadius();
 
-        if (spurCenter != null && world.distance(spurCenter) < 10) {
+        if (spurCenter != null && world.distance(spurCenter) < 10 / scale) { // スケールを考慮
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-        } else if (spurCenter != null && Math.abs(world.distance(spurCenter) - spurRadius) < 10) {
+        } else if (spurCenter != null && Math.abs(world.distance(spurCenter) - spurRadius) < 10 / scale) { // スケールを考慮
             setCursor(Cursor.getPredefinedCursor(Cursor.SE_RESIZE_CURSOR));
-        } else if (pinionCenter != null && world.distance(pinionCenter) < 10) {
+        } else if (pinionCenter != null && world.distance(pinionCenter) < 10 / scale) { // スケールを考慮
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         } else {
             setCursor(Cursor.getDefaultCursor());
