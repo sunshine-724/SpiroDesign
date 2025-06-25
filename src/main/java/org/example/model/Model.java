@@ -219,6 +219,10 @@ public class Model {
         return pinionGear.getPinionRadius();
     }
 
+    public Double getPionGearSpeed(){
+        return pinionGear.getSpeed();
+    }
+
     /**
      * スパーギアの中心位置を設定します。
      * スパーギアの中心位置は、スピロデザインの描画領域の中心を基準にします。
