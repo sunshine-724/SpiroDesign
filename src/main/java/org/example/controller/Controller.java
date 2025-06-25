@@ -42,13 +42,7 @@ import org.example.view.View;
     private Point pressPoint;
     private Point2D pressWorldPoint;
     private boolean isInner = true;
-    private double innerLimit;
-    private double outerLimit;
 
-    private Point2D.Double switchCenterInnerToOuter = null;
-    private Point2D.Double switchCenterOuterToInner = null;
-
-        
     /**
      * コンストラクタ
      * @param view ビューオブジェクト
@@ -62,8 +56,7 @@ import org.example.view.View;
         view.addMouseMotionListener(this);
     }
 
-    // マウスのコロコロ
-    public void mouseWheelMoved(MouseWheelEvent e_wheel) {
+    /*public void mouseWheelMoved(MouseWheelEvent e_wheel) {
         Integer amount = -e_wheel.getWheelRotation();
         int modifiers = e_wheel.getModifiersEx();
         boolean isShiftDown = (modifiers & MouseEvent.SHIFT_DOWN_MASK) != 0;
@@ -73,9 +66,18 @@ import org.example.view.View;
         if (isShiftDown)
             scroll = new Point(amount, 0);
         view.scaling(isShiftDown);
+    }*/
+
+    public void mouseWheelMoved(MouseWheelEvent e_wheel) {
+        double rotation = e_wheel.getPreciseWheelRotation();
+
+        // 拡大・縮小率の計算：回転が小さいほど緩やかにズーム
+        double zoomFactor = Math.pow(1.1, -rotation);
+
+        // マウスカーソル位置を中心にズームを実行（View クラス側で処理）
+        view.zoomAt(e_wheel.getPoint(), zoomFactor);
     }
 
-    // マウスクリック
     public void mouseClicked(MouseEvent e_click) {
         Point clickedpoint = e_click.getPoint();
         Point2D worldClicked = view.screenToWorld(clickedpoint);
@@ -96,16 +98,18 @@ import org.example.view.View;
 
         if (e_press.isPopupTrigger() || SwingUtilities.isRightMouseButton(e_press)) {
         view.showMenu(pressedPoint.x, pressedPoint.y);
-        return;  // 右クリック時は他の操作をしない
+        return;
     }
 
         Point2D spurCenter = model.getSpurGearPosition();
         double spurRadius = model.getSpurGearRadius();
         Point2D pinionCenter = model.getPinionGearPosition();
         double pinionRadius = model.getPinionGearRadius();
+        Point2D penPosition = model.getPenPosition();
 
         double distToSpur = pressWorldPoint.distance(spurCenter);
         double distToPinion = pressWorldPoint.distance(pinionCenter);
+        double distToPen = pressWorldPoint.distance(model.getPenPosition());
 
         if (distToSpur < 10) {
             draggingMode = DraggingMode.MOVE_SPUR_CENTER;
@@ -113,6 +117,8 @@ import org.example.view.View;
             draggingMode = DraggingMode.RESIZE_SPUR_RADIUS;
         } else if (distToPinion < 10) {
             draggingMode = DraggingMode.MOVE_PINION;
+        } else if (distToPen < 10) {
+            draggingMode = DraggingMode.NONE;
         } else {
             draggingMode = DraggingMode.PAN;
         }
@@ -151,38 +157,32 @@ import org.example.view.View;
                 double dxRaw = currentWorld.getX() - spurCenter.getX();
                 double dyRaw = currentWorld.getY() - spurCenter.getY();
                 double dist = Math.hypot(dxRaw, dyRaw);
-                if (dist < 5) break;
+                if (dist < 5.0) break;
 
                 double unitX = dxRaw / dist;
                 double unitY = dyRaw / dist;
 
-                // ここで「動的なピニオン半径」を計算（マウスに応じて）
-                double newPinionRadius = Math.abs(spurRadius - dist);  // 内接・外接のどちらでも正しく求まる
+                double newPinionRadius = Math.abs(spurRadius - dist);
 
-                // 最小半径制限
                 double minRadius = 5.0;
                 if (newPinionRadius < minRadius) {
                     newPinionRadius = minRadius;
                 }
 
-                // 内接/外接の判定と切り替え
                 double hysteresis = 2.0;
                 double innerLimit = spurRadius - newPinionRadius + hysteresis;
                 double outerLimit = spurRadius + newPinionRadius - hysteresis;
 
                 if (isInner) {
                     if (dist >= innerLimit) {
-                        // 内接 → 外接
                         isInner = false;
                     }
                 } else {
                     if (dist <= outerLimit) {
-                        // 外接 → 内接
                         isInner = true;
                     }
                 }
 
-                // 中心座標の計算（状態に応じて）
                 double distanceFromSpurCenter = isInner
                     ? spurRadius - newPinionRadius
                     : spurRadius + newPinionRadius;
@@ -191,13 +191,10 @@ import org.example.view.View;
                 double newCenterY = spurCenter.getY() + unitY * distanceFromSpurCenter;
                 Point2D.Double newCenter = new Point2D.Double(newCenterX, newCenterY);
 
-                // モデル更新
                 model.setPinionGearPosition(newCenter);
                 model.changePinionGearRadius(newPinionRadius);
                 model.movePenBy(dx, dy);
                 break;
-
-
 
             case PAN:
                 int panDx = currentPoint.x - pressPoint.x;
@@ -215,19 +212,3 @@ import org.example.view.View;
         model.mouseDragged(currentPoint);
     }
 }
-
-/*   */
-
-/*
- * public void mouseMoved(MouseEvent e_cursor) {
- * Point p = e_cursor.getPoint();
- * double d = p.distance(model.getSpurGearPosition());
- * if (d < 10) {
- * view.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
- * } else if (Math.abs(d - model.getSpurGearRadius()) < 10) {
- * view.setCursor(Cursor.getPredefinedCursor(Cursor.SE_RESIZE_CURSOR));
- * } else {
- * view.setCursor(Cursor.getDefaultCursor());
- * }
- * }
- */
