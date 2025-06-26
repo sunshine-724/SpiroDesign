@@ -219,7 +219,7 @@ public class Model {
         return pinionGear.getPinionRadius();
     }
 
-    public Double getPionGearSpeed(){
+    public Double getPinionGearSpeed(){
         return pinionGear.getSpeed();
     }
 
