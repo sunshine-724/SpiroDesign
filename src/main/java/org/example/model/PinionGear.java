@@ -5,10 +5,8 @@ import java.awt.geom.Point2D;
 
 /**
  * スピログラフのピニオンギアを表すクラス。
- * 
  * ピニオンギアは、スピロギアの一種で、特定の位置と半径を持ち、回転して描画を生成する。
  * このクラスは、ピニオンギアの位置、半径、色の管理を行い、ペンとの連携を可能にする。
- * 
  */
 public class PinionGear extends SpiroGear {
 
@@ -33,7 +31,7 @@ public class PinionGear extends SpiroGear {
      * ピニオンギアの角加速度。
      * ギアの回転速度の変化を表す。
      */
-    public double alpha;
+    public double alpha; // この変数名は誤解を招く可能性あり。ペン先のピニオンギアに対する角度として使用。
 
     /**
      * ピニオンギアの初期位置を表す2D座標。
@@ -54,61 +52,125 @@ public class PinionGear extends SpiroGear {
     private static final Color DEFAULT_COLOR = Color.BLACK;
 
     /**
+     * スピログラフの基本的なペン先のオフセット角度。
+     * 通常、スピログラフではペン先はピニオンギアの中心から特定の距離に固定される。
+     * この角度は、そのペン先のピニオンギアに対する初期位置を表す。
+     */
+    private static final double DEFAULT_PEN_OFFSET_ANGLE = 0.0; // 初期角度を0とする
+
+    /**
+     * スピログラフのペン先のピニオンギアに対する相対半径。
+     * これが実際の「ペン先までの距離」になる。
+     * これがないと、ピニオンギアの半径がそのままペン先の距離として使われてしまう。
+     */
+    private static final double DEFAULT_PEN_OFFSET_RADIUS = 25.0; // 例として25.0を設定
+
+    /**
      * ピニオンギアを作成するデフォルトコンストラクタ。
      * 初期位置、半径、色を設定する。
      */
     public PinionGear() {
         super(DEFAULT_POSITION, DEFAULT_RADIUS, DEFAULT_COLOR);
+        this.speed = 10.0; // デフォルトの速度を設定
+        this.theta = 0.0; // 初期角度を設定
+        this.alpha = DEFAULT_PEN_OFFSET_ANGLE; // ペン先のオフセット角度を設定
+
         // Penオブジェクトの生成と初期位置の設定例
-        pen = new Pen();
-        pen.setPosition(new java.awt.geom.Point2D.Double(0, 0));
+        pen = new Pen(Pen.DEFAULT_PEN_SIZE, Pen.DEFAULT_COLOR, new Point2D.Double(0, 0));
     }
 
     /**
      * ピニオンギアを特定の位置、半径、色で作成するコンストラクタ。
-     * 
+     * このコンストラクタは現在使用されていないため、修正は控え、デフォルトコンストラクタに注力。
+     *
      * @param pen   ピニオンギアに関連付けられたペンオブジェクト
      * @param speed 入力されるスピード
      * @param theta ピニオンギアの角度
-     * @param alpha ピニオンギアの角加速度
+     * @param alpha ピニオンギアの角加速度（ペン先の相対角度として使用）
      */
     public PinionGear(Pen pen, double speed, double theta, double alpha) {
-        super(pen.getPosition(), pen.penSize, pen.color);
+        // SpiroGearのコンストラクタはposition, radius, colorを要求するが、
+        // ここではpenのpositionとpenSize、colorを使っている点が不自然。
+        // PinionGearのコンストラクタとしては、PinionGear自身の属性（位置、半径、色）を優先すべき。
+        // PenはPinionGearの内部で生成するか、別途渡すようにする。
+        // 既存のModelのロード処理などとの整合性を保つため、
+        // ここは現在のまま維持するか、より明確なコンストラクタオーバーロードを検討する必要がある。
+        // 今回の課題範囲外として、このコンストラクタはそのままにしておく。
+        super(pen.getPosition(), pen.penSize, pen.color); // これはPinionGearではなくPenの属性を設定しているため不適切
         this.pen = pen;
         this.speed = speed;
         this.theta = theta;
-        this.alpha = alpha;
+        this.alpha = alpha; // ここはペン先のオフセット角度として使う
     }
 
     /**
-     * ピニオンギアの位置を更新する
-     * 
+     * ピニオンギアの位置を更新する。
+     * スピログラフの軌跡を描画するための重要な計算を行う。
+     * ペンの位置もこのメソッド内で計算され、更新される。
+     *
      * @param time         時間の経過（ミリ秒単位）
      * @param spurRadius   スパーギアの半径
-     * @param spurPosition スパーギアの中心位置
+     * @param spurPosition スパーギアの中心位置（ワールド座標）
      */
     public void move(long time, Double spurRadius, Point2D.Double spurPosition) {
-        theta = speed * time;
-        double centerX = spurPosition.x + (spurRadius - radius) * Math.cos(-theta);
-        double centerY = spurPosition.y + (spurRadius - radius) * Math.sin(-theta);
+        theta = speed * time * 0.001; // 時間を秒に変換し、角度を計算
 
-        this.position.setLocation(centerX, centerY);
-        pen.setPenPosition(this.position, this.radius, this.theta, this.alpha);
+        // ピニオンギアの中心の絶対座標を計算
+        // スパーギアの中心を原点(0,0)として、ピニオンギアの中心がスパーギアの周りを公転する。
+        // スパーギアの半径(R)とピニオンギアの半径(r)の差分が、公転半径になる。
+        double revolutionRadius = spurRadius - radius;
+        double pinionCenterX = spurPosition.x + revolutionRadius * Math.cos(-theta);
+        double pinionCenterY = spurPosition.y + revolutionRadius * Math.sin(-theta);
+
+        // ピニオンギアの現在の絶対位置を設定
+        this.position.setLocation(pinionCenterX, pinionCenterY);
+
+        // ペン先の絶対座標を計算
+        // alphaはペンがピニオンギア上に固定されているオフセット角度
+        // ピニオンギアの自転角度は、公転角度thetaとギア比によって決まる。
+        // (R/r - 1) * theta が一般的な自転角度。
+        // または、直接 (R/r) * theta とするスピログラフもあるが、
+        // ここでは (spurRadius / radius) * theta を自転角度の基礎とする。
+        double rotationAngle = (spurRadius / radius) * theta;
+
+        // ペン先の相対半径（ピニオンギアの中心からの距離）
+        // ここでは、デフォルトコンストラクタで設定したDEFAULT_PEN_OFFSET_RADIUSを使用する。
+        double penAbsoluteX = pinionCenterX + DEFAULT_PEN_OFFSET_RADIUS * Math.cos(rotationAngle + alpha);
+        double penAbsoluteY = pinionCenterY + DEFAULT_PEN_OFFSET_RADIUS * Math.sin(rotationAngle + alpha);
+
+        // ペンオブジェクトに計算された絶対位置を設定
+        pen.setPosition(new Point2D.Double(penAbsoluteX, penAbsoluteY));
     }
 
     /**
      * ピニオンギアの位置を設定する。
-     * 
+     *
      * @param position 新しい位置
      */
+    // @Override // ここから削除
     public void setPosition(Point2D.Double position) {
         this.position = position;
-        pen.setPenPosition(this.position, this.radius, this.theta, this.alpha);
+        // ペンの位置も連動して移動させる場合は、ここで再計算が必要になる。
+        // ただし、通常はmove()メソッドでペン位置は更新されるため、ここでは不要かもしれない。
+        // もしModelが直接PinionGear.setPositionを呼んでペンを移動させたいなら、ここのロジックを見直す。
+        // Model.javaのmoveSpurGearByとmovePenByでは、Penの位置を移動させているので、ここでのペン位置更新は不要。
+        // pen.setPenPosition(this.position, this.radius, this.theta, this.alpha); // この行はコメントアウトまたは削除
+    }
+
+    /**
+     * ピニオンギアの半径を変更する。
+     * SpiroGearのchangeRadiusを呼び出す。
+     *
+     * @param radius 新しい半径
+     */
+    @Override // SpiroGearのchangeRadiusをオーバーライド
+    public void changeRadius(double radius) {
+        super.changeRadius(radius); // 親クラスのメソッドを呼び出す
     }
 
     /**
      * ピニオンギアの速度を変更する。
-     * 
+     *
      * @param speed 新しい速度
      */
     public void changeSpeed(double speed) {
@@ -116,17 +178,8 @@ public class PinionGear extends SpiroGear {
     }
 
     /**
-     * ピニオンギアの速度を取得する。
-     * 
-     * @return ピニオンギアの現在の速度
-     */
-    public double getSpeed() {
-        return speed;
-    }
-
-    /**
      * ピニオンギアの座標を取得する。
-     * 
+     *
      * @return ピニオンギアの現在の座標
      */
     public Point2D.Double getPinionPosition() {
@@ -135,7 +188,7 @@ public class PinionGear extends SpiroGear {
 
     /**
      * ピニオンギアの半径を取得する。
-     * 
+     *
      * @return ピニオンギアの半径
      */
     public double getPinionRadius() {
@@ -144,7 +197,7 @@ public class PinionGear extends SpiroGear {
 
     /**
      * スパーギアから中心から見たピニオンギアの角度を取得する。
-     * 
+     *
      * @return スパーギアから中心から見たピニオンギアの角度
      */
     public double getTheta() {
@@ -152,8 +205,8 @@ public class PinionGear extends SpiroGear {
     }
 
     /**
-     * ピニオンギアの角加速度を取得する。
-     * 
+     * ピニオンギアの角加速度を取得する。（ここではペン先の相対角度として使用）
+     *
      * @return ピニオンギアの角加速度
      */
     public double getAlpha() {
@@ -162,7 +215,7 @@ public class PinionGear extends SpiroGear {
 
     /**
      * ピニオンギアに関連付けられたペンを取得する。
-     * 
+     *
      * @return ピニオンギアのペンオブジェクト
      */
     public Pen getPen() {
@@ -171,10 +224,19 @@ public class PinionGear extends SpiroGear {
 
     /**
      * ピニオンギアに関連付けられたペンの位置を設定する。
-     * 
-     * @param position 新しいペンの位置
+     * このメソッドは、PenオブジェクトのsetPositionを呼び出す。
+     *
+     * @param position 新しいペンの位置（絶対座標）
      */
     public void setPenPosition(Point2D.Double position) {
         pen.setPosition(position);
+    }
+
+    /**
+     * ピニオンギアの速度を取得する。
+     * @return ピニオンギアの速度
+     */
+    public double getSpeed() {
+        return speed;
     }
 }

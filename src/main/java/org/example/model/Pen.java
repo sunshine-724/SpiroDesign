@@ -27,12 +27,12 @@ public class Pen {
     /**
      * デフォルトのペンサイズ。
      */
-    private static final double DEFAULT_PEN_SIZE = 5.0;
+    public static final double DEFAULT_PEN_SIZE = 5.0; // private から public に変更
 
     /**
      * デフォルトのペンの色。
      */
-    private static final Color DEFAULT_COLOR = Color.BLACK;
+    public static final Color DEFAULT_COLOR = Color.BLACK; // private から public に変更
 
     /**
      * ペンを作成するデフォルトコンストラクタ。
@@ -41,6 +41,7 @@ public class Pen {
     public Pen() {
         this.penSize = DEFAULT_PEN_SIZE;
         this.color = DEFAULT_COLOR;
+        this.position = new Point2D.Double(0, 0);
     }
 
     /**
@@ -58,17 +59,16 @@ public class Pen {
 
     /**
      * ピニオンギアの動きに応じてペンを移動させるメソッド。
-     * ペンの位置は、ピニオンギアの位置と半径、角度、角加速度に基づいて計算される。
+     * ペンの位置は、ピニオンギアの中心からの相対位置として計算されるべきである。
      *
-     * @param pinionPosition ピニオンギアの位置
+     * @param pinionPosition ピニオンギアの絶対位置（中心座標）
      * @param pinionRadius   ピニオンギアの半径
-     * @param theta          ピニオンギアの角度
-     * @param alpha          ピニオンギアの角加速度
+     * @param theta          ピニオンギアの回転角度（スパーギアからの相対角度）
+     * @param alpha          ペン先のオフセット角度（ピニオンギア中心からの相対角度）
      */
     public void setPenPosition(Point2D.Double pinionPosition, Double pinionRadius, Double theta, Double alpha) {
-        double penX = pinionPosition.x + pinionRadius * Math.cos(theta + alpha);
-        double penY = pinionPosition.y + pinionRadius * Math.sin(theta + alpha);
-        this.position.setLocation(penX, penY);
+        this.position.setLocation(pinionPosition.x + pinionRadius * Math.cos(alpha),
+                                  pinionPosition.y + pinionRadius * Math.sin(alpha));
     }
 
     /**
@@ -103,8 +103,17 @@ public class Pen {
      *
      * @param size 新しいサイズ
      */
-    public void changeSize(double size) {
+    public void setPenSize(double size) {
         this.penSize = size;
+    }
+
+    /**
+     * ペンのサイズを取得するメソッド。
+     *
+     * @return ペンのサイズ
+     */
+    public double getPenSize() {
+        return penSize;
     }
 
     /**
@@ -112,10 +121,6 @@ public class Pen {
      *
      * @return ペンの色
      */
-    public double getPenSize() {
-        return penSize;
-    }
-
     public Color getColor() {
         return color;
     }
