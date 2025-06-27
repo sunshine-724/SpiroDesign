@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.awt.Point;
 import java.awt.geom.*;
 import java.io.File;
+import java.io.IOException; // IOExceptionをインポート
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,44 +19,43 @@ import org.example.lib.*;
  * Modelクラスは、Spiro.appのデータを管理するクラス。
  */
 
-public class Model {
+public class Model implements Serializable { // Serializableを実装
+    private static final long serialVersionUID = 1L; // serialVersionUIDを追加
 
     /**
      * スパーギアとピニオンギアのインスタンスを保持する。
      * スパーギアは大きな円で、ピニオンギアは小さな円。
      * ピニオンギアはスパーギアの周りを回転し、ペンを動かしてスピロデザインを描く。
      */
-    // protected から private に変更（外部からの直接アクセスを避けるため）
     private SpurGear spurGear;
     private PinionGear pinionGear;
 
     /**
      * SpiroIOは、スピロデザインのデータを読み書きするためのクラス。
      * ファイルからスパーギア、ピニオンギアのデータを読み込んだり、保存したりする。
+     * SpiroIOはModelの一部ではないため、シリアライズしない
      */
-    SpiroIO spiroIO;
+    private transient SpiroIO spiroIO; // transientとしてマーク
 
     /**
      * Viewのリストを保持する。
-     * Viewは、すぴろデザインの描画レイヤーとユーザーインターフェースを担当する。
-     * ModelはViewにデータを提供し、ViewはModelの状態を表示する。
-     * ModelはViewに依存しないが、ViewはModelのデータを表示するためにModelに依存する。
-     * ModelはViewに対して通知を行い、ViewはModelのデータを更新する。
+     * ViewはGUIコンポーネントであり、シリアライズすべきではないためtransientとする。
      */
-    List<View> views = new ArrayList<>(); // Viewのリスト
+    private transient List<View> views = new ArrayList<>(); // transientとしてマーク
 
     /**
      * タイマーは一定の間隔でModelのデータを更新し、Viewに通知し、スピロデザインの描画をアニメーションするために使用される。
+     * TimerはGUI関連のオブジェクトであり、シリアライズすべきではないためtransientとする。
      */
-    Timer timer;
-
-    /** 描画開始時刻(ミリ秒) */
-    private long startTime;
-
-    /** 一時停止時間(ミリ秒) */
-    private long pauseTime;
+    private transient Timer timer; // transientとしてマーク
 
     List<Point2D.Double> locus = new ArrayList<>(); // Locus of the pen
+
+    /** 描画開始時刻(ミリ秒) */
+    private long startTime; // 宣言を追加
+
+    /** 一時停止時間(ミリ秒) */
+    private long pauseTime; // 宣言を追加
 
     /**
      * 1ミリ秒あたりのフレーム数
@@ -71,10 +72,17 @@ public class Model {
     public Model() {
         // コンストラクタでギアを初期化する代わりに、resetGears()を呼び出す
         resetGears(); // 初期化もresetGears()で行う
+        initializeTransientFields(); // transientフィールドの初期化を呼び出す
+    }
+
+    /**
+     * transientフィールドを初期化するヘルパーメソッド。
+     * デシリアライズ後にも呼び出される必要がある。
+     */
+    private void initializeTransientFields() {
         spiroIO = new SpiroIO();
-        startTime = System.currentTimeMillis();
-        pauseTime = 0;
-        timer = new Timer(FRAME_PER_MILLISECOND, e -> {
+        views = new ArrayList<>(); // 再度初期化
+        timer = new Timer(FRAME_PER_MILLISECOND, e -> { // FRAME_PER_MILLISEensecond を修正
             updateData(); // データ更新
             // Modelが更新されたらViewに再描画を通知
             // ModelはViewに依存しないが、Modelの状態が変更されたことをViewに伝える必要がある
@@ -82,7 +90,21 @@ public class Model {
                 view.repaint();
             }
         });
+        // デシリアライズ後にstart()やstop()が呼ばれるまでtimerは停止状態なので、startTime/pauseTimeはここでリセットしない。
+        // resetGears()でリセットされることを想定。
     }
+
+    /**
+     * オブジェクトのデシリアライズ後に呼び出されるメソッド。
+     * transientとしてマークされたフィールドを再初期化する。
+     */
+    private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject(); // デフォルトのデシリアライズ処理を実行
+        initializeTransientFields(); // transientフィールドを再初期化
+        // タイマーは停止した状態でロードされるため、ロードされた開始時刻と停止時刻を適切に設定
+        // これはloadDataでModelの状態を置き換えた後に処理するべきかもしれない
+    }
+
 
     /**
      * スピロデザインのの描画を開始する。
@@ -122,9 +144,6 @@ public class Model {
         // ペンの位置を取得
         Point2D.Double penPosition = pinionGear.getPen().getPosition();
 
-        // ロードされた軌跡データが存在する場合は、新しい描画はクリアする
-        // ModelはloadedLocusDataの概念を持つべきではない。Viewが持つべき情報。
-        // ここでは単純にlocusに追加する
         locus.add(penPosition);
     }
 
@@ -158,6 +177,10 @@ public class Model {
      * @param view 通知を受け取るViewのインスタンス
      */
     public void addView(View view) {
+        // viewsがデシリアライズ後にnullになる可能性があるので、ここで初期化を確認
+        if (this.views == null) {
+            this.views = new ArrayList<>();
+        }
         views.add(view);
     }
 
@@ -328,15 +351,6 @@ public class Model {
     }
 
     /**
-     * ピニオンギアのペンのサイズを取得する。
-     *
-     * @return ピニオンギアのペンのサイズ
-     */
-    public double getPenSize() {
-        return pinionGear.getPen().getPenSize();
-    }
-
-    /**
      * ピニオンギアのペンの位置を設定する。
      *
      * @param pos ペンの位置
@@ -344,6 +358,15 @@ public class Model {
     public void setPenPosition(Point2D pos) {
         Point2D.Double newPos = new Point2D.Double(pos.getX(), pos.getY());
         pinionGear.setPenPosition(newPos);
+    }
+
+    /**
+     * ピニオンギアのペンのサイズを取得する。
+     *
+     * @return ピニオンギアのペンのサイズ
+     */
+    public double getPenSize() {
+        return pinionGear.getPen().getPenSize();
     }
 
     /**
@@ -450,9 +473,19 @@ public class Model {
                 this.spurGear = loadedModel.getSpurGear();
                 this.pinionGear = loadedModel.getPinionGear();
                 this.locus = loadedModel.getLocus();
-                this.pinionGear.setPenPosition(loadedPen.getPosition()); // ペンの位置も設定
+                // transientフィールドはデシリアライズされないので、readObject()で再初期化される
+                // ここでは、ロードされたペンの状態を現在のピニオンギアのペンに反映させる
+                this.pinionGear.getPen().setPosition(loadedPen.getPosition());
                 this.pinionGear.getPen().setPenSize(loadedPen.getPenSize());
                 this.pinionGear.getPen().changeColor(loadedPen.getColor());
+
+                // ロード時にタイマーが再開されないように stop() を呼び出す。
+                // start/pauseTimeもリセットされるべきだが、それはloadDataの呼び出し元（Controller）
+                // またはModelのresetGears()で行うのが望ましい。
+                this.pauseTime = 0; // ロード後は一時停止時間をリセット
+                this.startTime = System.currentTimeMillis(); // 開始時刻もリセットして、再開時に正しく動作するようにする
+                stop(); // ロード後はアニメーションを停止状態にする（Controllerでも行うが念のため）
+
 
                 notifyViewsLoading(this.locus, this.pinionGear.getPen().getColor(), this.pinionGear.getPen().getPenSize()); // Viewにデータの更新を通知
 
@@ -463,6 +496,7 @@ public class Model {
             }
         } catch (Exception e) {
             System.err.println("Error loading data: " + e.getMessage());
+            // エラーメッセージを表示するなどの処理を追加
             return false; // 読み込みに失敗した場合はfalseを返す
         }
     }

@@ -2,13 +2,15 @@ package org.example.model;
 
 import java.awt.Color;
 import java.awt.geom.Point2D;
+import java.io.Serializable;
 
 /**
  * スピログラフのピニオンギアを表すクラス。
  * ピニオンギアは、スピロギアの一種で、特定の位置と半径を持ち、回転して描画を生成する。
  * このクラスは、ピニオンギアの位置、半径、色の管理を行い、ペンとの連携を可能にする。
  */
-public class PinionGear extends SpiroGear {
+public class PinionGear extends SpiroGear implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     /**
      * ピニオンギアのペンを表すオブジェクト。
@@ -89,13 +91,6 @@ public class PinionGear extends SpiroGear {
      * @param alpha ピニオンギアの角加速度（ペン先の相対角度として使用）
      */
     public PinionGear(Pen pen, double speed, double theta, double alpha) {
-        // SpiroGearのコンストラクタはposition, radius, colorを要求するが、
-        // ここではpenのpositionとpenSize、colorを使っている点が不自然。
-        // PinionGearのコンストラクタとしては、PinionGear自身の属性（位置、半径、色）を優先すべき。
-        // PenはPinionGearの内部で生成するか、別途渡すようにする。
-        // 既存のModelのロード処理などとの整合性を保つため、
-        // ここは現在のまま維持するか、より明確なコンストラクタオーバーロードを検討する必要がある。
-        // 今回の課題範囲外として、このコンストラクタはそのままにしておく。
         super(pen.getPosition(), pen.penSize, pen.color); // これはPinionGearではなくPenの属性を設定しているため不適切
         this.pen = pen;
         this.speed = speed;
@@ -144,17 +139,12 @@ public class PinionGear extends SpiroGear {
 
     /**
      * ピニオンギアの位置を設定する。
-     *
+     * 親クラスのsetPositionメソッドをオーバーライドする。
      * @param position 新しい位置
      */
-    // @Override // ここから削除
+    @Override // SpiroGearのsetPositionをオーバーライド
     public void setPosition(Point2D.Double position) {
         this.position = position;
-        // ペンの位置も連動して移動させる場合は、ここで再計算が必要になる。
-        // ただし、通常はmove()メソッドでペン位置は更新されるため、ここでは不要かもしれない。
-        // もしModelが直接PinionGear.setPositionを呼んでペンを移動させたいなら、ここのロジックを見直す。
-        // Model.javaのmoveSpurGearByとmovePenByでは、Penの位置を移動させているので、ここでのペン位置更新は不要。
-        // pen.setPenPosition(this.position, this.radius, this.theta, this.alpha); // この行はコメントアウトまたは削除
     }
 
     /**
