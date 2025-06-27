@@ -7,6 +7,7 @@ import java.awt.event.MouseWheelListener;
 import java.awt.geom.Point2D;
 import java.awt.Color;
 import java.io.File;
+import java.awt.Cursor; // 追加: java.awt.Cursorをインポート
 
 import javax.swing.SwingUtilities;
 import javax.swing.event.MouseInputAdapter;
@@ -76,161 +77,124 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
      */
     @Override
     public void mouseClicked(MouseEvent e_click) {
-        Point clickedpoint = e_click.getPoint();
-        Point2D worldClicked = view.screenToWorld(clickedpoint);
-        Point2D pinionCenter = model.getPinionGearPosition();
-        double distance = worldClicked.distance(pinionCenter);
-        double radius = model.getPinionGearRadius();
-
-        if (distance <= radius) {
-            model.setPenPosition(worldClicked);
-            view.repaint();
-            return;
+        Point clickedScreenPoint = e_click.getPoint();
+        if (SwingUtilities.isLeftMouseButton(e_click)) {
+            model.setPenPosition(view.screenToWorld(clickedScreenPoint));
         }
-        model.mouseClicked(clickedpoint);
+        view.repaint();
     }
 
     /**
-     * マウスが押された時の処理。
-     * ドラッグモードを設定し、ポップアップメニューを表示する。
+     * マウスボタンが押された時の処理。
+     * ドラッグ操作の開始点を記録し、ドラッグモードを設定する。
      * @param e_press マウスプレスイベント
      */
     @Override
     public void mousePressed(MouseEvent e_press) {
-        this.pressPoint = e_press.getPoint();
-        this.pressWorldPoint = view.screenToWorld(this.pressPoint);
+        pressPoint = e_press.getPoint();
+        pressWorldPoint = view.screenToWorld(pressPoint);
 
-        if (e_press.isPopupTrigger() || SwingUtilities.isRightMouseButton(e_press)) {
-            view.showMenu(pressPoint.x, pressPoint.y);
-            return;
-        }
-
-        Point2D spurCenter = model.getSpurGearPosition();
-        double spurRadius = model.getSpurGearRadius();
-        Point2D pinionCenter = model.getPinionGearPosition();
-        Point2D penPosition = model.getPenPosition();
-
-        double distToSpur = (spurCenter != null) ? pressWorldPoint.distance(spurCenter) : Double.MAX_VALUE;
-        double distToPinion = (pinionCenter != null) ? pressWorldPoint.distance(pinionCenter) : Double.MAX_VALUE;
-        double distToPen = (penPosition != null) ? pressWorldPoint.distance(penPosition) : Double.MAX_VALUE;
-
-        double hitTolerance = 10.0 / view.getScale();
-
-        if (spurCenter != null && distToSpur < hitTolerance) {
+        // スパーギアの中心をドラッグ
+        if (model.getSpurGearPosition().distance(pressWorldPoint) < 10 / view.getScale()) {
             draggingMode = DraggingMode.MOVE_SPUR_CENTER;
-        } else if (spurCenter != null && Math.abs(distToSpur - spurRadius) < hitTolerance) {
+        }
+        // スパーギアの半径をドラッグ
+        else if (Math.abs(model.getSpurGearPosition().distance(pressWorldPoint) - model.getSpurGearRadius()) < 10 / view.getScale()) {
             draggingMode = DraggingMode.RESIZE_SPUR_RADIUS;
-        } else if (pinionCenter != null && distToPinion < hitTolerance) {
+            view.setDefiningSpurGear(true); // スパーギア定義中フラグをセット
+            view.setSpurGearCenterScreen(view.worldToScreen(model.getSpurGearPosition())); // 中心点を設定
+        }
+        // ピニオンギアをドラッグ
+        else if (model.getPinionGearPosition().distance(pressWorldPoint) < 10 / view.getScale()) {
             draggingMode = DraggingMode.MOVE_PINION;
-        } else if (penPosition != null && distToPen < hitTolerance) {
-            draggingMode = DraggingMode.NONE;
-        } else {
+            view.setDefiningPinionGear(true);
+            view.setPinionGearCenterScreen(view.worldToScreen(model.getPinionGearPosition()));
+        }
+        // 背景をパン
+        else {
             draggingMode = DraggingMode.PAN;
         }
 
-        model.mousePressed(pressPoint);
+        // 右クリックでポップアップメニューを表示
+        if (e_press.isPopupTrigger() || SwingUtilities.isRightMouseButton(e_press)) {
+            view.MenuDisplay.show(e_press.getComponent(), e_press.getX(), e_press.getY());
+        }
     }
 
     /**
-     * マウスが離された時の処理。
+     * マウスがドラッグされた時の処理。
+     * 現在のドラッグモードに応じて、ギアの移動、半径変更、ビューのパンを行う。
+     * @param e_drag マウスドラッグイベント
+     */
+    @Override
+    public void mouseDragged(MouseEvent e_drag) {
+        Point currentScreenPoint = e_drag.getPoint();
+        Point2D currentWorldPoint = view.screenToWorld(currentScreenPoint);
+
+        if (draggingMode == DraggingMode.MOVE_SPUR_CENTER) {
+            model.moveSpurGear(currentWorldPoint);
+        } else if (draggingMode == DraggingMode.RESIZE_SPUR_RADIUS) {
+            model.changeSpurGearRadius(currentWorldPoint);
+            view.setCurrentDragPointScreen(currentScreenPoint); // ガイド描画用に現在のドラッグ点を更新
+        } else if (draggingMode == DraggingMode.MOVE_PINION) {
+            model.movePinionGear(currentWorldPoint);
+            view.setCurrentDragPointScreenForPinion(currentScreenPoint);
+        } else if (draggingMode == DraggingMode.PAN) {
+            model.panView(pressPoint, currentScreenPoint);
+            pressPoint = currentScreenPoint; // ドラッグ開始点を更新
+        }
+        view.repaint();
+        view.updateCursor(currentScreenPoint); // カーソルを更新
+    }
+
+    /**
+     * マウスボタンが離された時の処理。
      * ドラッグモードをリセットする。
      * @param e_release マウスリリースイベント
      */
     @Override
     public void mouseReleased(MouseEvent e_release) {
+        // 右クリックでポップアップメニューを表示
+        if (e_release.isPopupTrigger() || SwingUtilities.isRightMouseButton(e_release)) {
+            view.MenuDisplay.show(e_release.getComponent(), e_release.getX(), e_release.getY());
+        }
+
         draggingMode = DraggingMode.NONE;
-        model.mouseReleased(e_release.getPoint());
+        view.setDefiningSpurGear(false); // フラグをリセット
+        view.setDefiningPinionGear(false);
+        view.repaint();
+        view.updateCursor(e_release.getPoint()); // カーソルを更新
     }
 
     /**
-     * マウスがドラッグされた時の処理。
-     * ドラッグモードに応じて、スパーギア、ピニオンギアの移動・サイズ変更、またはビューのパンを行う。
-     * @param e_drag マウスドラッグイベント
+     * マウスがコンポーネントに入った時の処理。
+     * @param e_enter マウスエンターイベント
      */
     @Override
-    public void mouseDragged(MouseEvent e_drag) {
-        Point currentPoint = e_drag.getPoint();
-        Point2D currentWorld = view.screenToWorld(currentPoint);
+    public void mouseEntered(MouseEvent e_enter) {
+        isInner = true;
+    }
 
-        double dx = currentWorld.getX() - pressWorldPoint.getX();
-        double dy = currentWorld.getY() - pressWorldPoint.getY();
+    /**
+     * マウスがコンポーネントから出た時の処理。
+     * @param e_exit マウスイグジットイベント
+     */
+    @Override
+    public void mouseExited(MouseEvent e_exit) {
+        isInner = false;
+        view.setCursor(Cursor.getDefaultCursor()); // デフォルトカーソルに戻す
+    }
 
-        switch (draggingMode) {
-            case MOVE_SPUR_CENTER:
-                model.moveSpurGearBy(dx, dy);
-                break;
-
-            case RESIZE_SPUR_RADIUS:
-                Point2D spurCenterForResize = model.getSpurGearPosition();
-                if (spurCenterForResize != null) {
-                    double newRadius = currentWorld.distance(spurCenterForResize);
-                    model.setSpurRadius(newRadius);
-                }
-                break;
-
-            case MOVE_PINION:
-                Point2D spurCenter = model.getSpurGearPosition();
-                if (spurCenter == null) break;
-
-                double spurRadius = model.getSpurGearRadius();
-
-                double dxRaw = currentWorld.getX() - spurCenter.getX();
-                double dyRaw = currentWorld.getY() - spurCenter.getY();
-                double dist = Math.hypot(dxRaw, dyRaw);
-                if (dist < 5.0 / view.getScale()) break;
-
-                double unitX = dxRaw / dist;
-                double unitY = dyRaw / dist;
-
-                double newPinionRadius = Math.abs(spurRadius - dist);
-
-                double minRadius = 5.0;
-                if (newPinionRadius < minRadius) {
-                    newPinionRadius = minRadius;
-                }
-
-                double hysteresis = 2.0 / view.getScale();
-                double innerLimit = spurRadius - newPinionRadius + hysteresis;
-                double outerLimit = spurRadius + newPinionRadius - hysteresis;
-
-                if (isInner) {
-                    if (dist >= innerLimit) {
-                        isInner = false;
-                    }
-                } else {
-                    if (dist <= outerLimit) {
-                        isInner = true;
-                    }
-                }
-
-                double distanceFromSpurCenter = isInner
-                    ? spurRadius - newPinionRadius
-                    : spurRadius + newPinionRadius;
-
-                double newCenterX = spurCenter.getX() + unitX * distanceFromSpurCenter;
-                double newCenterY = spurCenter.getY() + unitY * distanceFromSpurCenter;
-                Point2D.Double newCenter = new Point2D.Double(newCenterX, newCenterY);
-
-                model.setPinionGearPosition(newCenter);
-                model.changePinionGearRadius(newPinionRadius);
-                model.movePenBy(dx, dy);
-                break;
-
-            case PAN:
-                int panDx = currentPoint.x - this.pressPoint.x;
-                int panDy = currentPoint.y - this.pressPoint.y;
-                view.pan(panDx, panDy);
-                break;
-
-            default:
-                break;
+    /**
+     * マウスが移動した時の処理。
+     * カーソルを更新する。
+     * @param e_move マウスムーブイベント
+     */
+    @Override
+    public void mouseMoved(MouseEvent e_move) {
+        if (isInner) { // マウスがパネル内にある場合のみカーソルを更新
+            view.updateCursor(e_move.getPoint());
         }
-
-        this.pressPoint = currentPoint;
-        this.pressWorldPoint = currentWorld;
-
-        view.repaint();
-        model.mouseDragged(currentPoint);
     }
 
     /**
@@ -248,9 +212,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
                 model.stop();
                 break;
             case "Clear":
-                model.resetGears();
-                model.stop();
-                view.clearLoadedLocusData();
+                model.resetGears(); // ギアをリセット
                 view.repaint();
                 break;
             case "Save":
@@ -268,7 +230,6 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
                 if (loadFile != null) {
                     if (model.loadData(loadFile)) {
                         view.displaySaveSuccessMessage("読み込みました！");
-                        model.stop();
                     } else {
                         view.displaySaveSuccessMessage("読み込みに失敗しました。");
                     }
@@ -276,8 +237,6 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
                 break;
             case "Small":
                 model.getPinionGear().getPen().setPenSize(1.0);
-                // ペンサイズ変更後も色セグメントを適切に処理する必要がある場合、
-                // model.changePenColor(model.getPenColor()); のように呼び出す
                 view.repaint();
                 break;
             case "Medium":
@@ -300,17 +259,19 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
      */
     @Override
     public void onColorSelected(Color color) {
-        model.changePenColor(color); // Modelの新しい色変更メソッドを呼び出す
+        model.changePenColor(color);
         view.repaint();
     }
 
     /**
      * MenuButtonListenerインターフェースの実装メソッド。
      * スピードスライダーの値が変更された時の処理を行う。
-     * @param speed 選択されたスピード
+     * @param speed 選択されたスピード (スライダーの整数値: 1〜10)
      */
     @Override
     public void onSpeedSelected(double speed) {
-        model.changeSpeed(speed);
+        // スライダーから受け取った速度値 (1〜10) を実際の速度 (0.1〜1.0) にスケールダウンしてモデルに渡す
+        model.changeSpeed(speed / 10.0);
+        view.repaint();
     }
 }
