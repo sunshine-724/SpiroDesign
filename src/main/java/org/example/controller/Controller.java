@@ -65,6 +65,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         double radius = model.getPinionGearRadius();
         if (distance <= radius) {
             model.setPenPosition(worldClicked);
+            model.setPenVisible(true);
             view.repaint();
             return;
         }
@@ -129,36 +130,30 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
                 break;
 
             case RESIZE_SPUR_RADIUS:
-                // スパーギアの中心と現在のマウス位置との距離を新しい半径とする
                 double newSpurRadius = currentWorld.distance(spurCenter);
                 if (newSpurRadius < 10.0) {
                     newSpurRadius = 10.0;
                 }
 
-                // 現在の半径情報を取得
                 double oldSpurRadius = spurRadius;
                 double oldPinionRadius = pinionRadius;
 
-                // スケーリング比率を計算
                 double scale = newSpurRadius / oldSpurRadius;
 
-                // ピニオンの新しい半径を算出
                 double newPinionRadius = oldPinionRadius * scale;
                 if (newPinionRadius < 5.0) {
                     newPinionRadius = 5.0;
                 }
 
-                // ピニオンの新しい中心位置を計算
                 dxRaw = pinionCenter.getX() - spurCenter.getX();
                 dyRaw = pinionCenter.getY() - spurCenter.getY();
                 dist = Math.hypot(dxRaw, dyRaw);
                 if (dist < 1e-6) {
-                    break; // 中心が一致してるときは何もしない
+                    break;
                 }
                 unitX = dxRaw / dist;
                 unitY = dyRaw / dist;
 
-                // 内接 or 外接の関係を維持して新しい中心位置を決定
                 double distanceFromSpurCenter = isInner
                         ? newSpurRadius - newPinionRadius
                         : newSpurRadius + newPinionRadius;
@@ -167,7 +162,6 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
                 double newCenterY = spurCenter.getY() + unitY * distanceFromSpurCenter;
                 Point2D newPinionCenter = new Point2D.Double(newCenterX, newCenterY);
 
-                // モデルに反映
                 model.setSpurRadius(newSpurRadius);
                 model.changePinionGearRadius(newPinionRadius);
                 model.setPinionGearPosition(newPinionCenter);
@@ -216,6 +210,11 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
                 int panDy = currentPoint.y - pressPoint.y;
                 view.pan(panDx, panDy);
                 break;
+
+                if ((draggingMode == DraggingMode.MOVE_SPUR_CENTER || draggingMode == DraggingMode.MOVE_PINION)
+                && model.isPenVisible()) {
+                model.setPenVisible(false);
+            }
 
             default:
                 break;
