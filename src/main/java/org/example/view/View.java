@@ -33,7 +33,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.JLabel;
 import java.util.Hashtable;
-import java.text.DecimalFormat; // DecimalFormatをインポート
+import java.text.DecimalFormat;
 
 /**
  * スピログラフアプリケーションのViewクラス。
@@ -52,8 +52,8 @@ public class View extends JPanel {
 
     /** 拡大縮小率 */
     private double scale = 1.0;
-    private static final double MIN_SCALE = 0.1; // 最小スケールをより小さく設定
-    private static final double MAX_SCALE = 5.0; // 最大スケールをより大きく設定
+    private static final double MIN_SCALE = 0.1;
+    private static final double MAX_SCALE = 5.0;
 
     /** ビューのオフセット（パン用） */
     private Point2D.Double viewOffset = new Point2D.Double(0, 0);
@@ -125,7 +125,7 @@ public class View extends JPanel {
             }
         };
 
-        // --- メインボタン群をJMenuItemとしてJPopupMenuに追加 ---
+        // メインボタン群をJMenuItemとしてJPopupMenuに追加
         String[] mainButtonNames = { "Start", "Stop", "Clear", "Save", "Load" };
         for (String name : mainButtonNames) {
             JMenuItem item = new JMenuItem(name);
@@ -135,7 +135,7 @@ public class View extends JPanel {
 
         MenuDisplay.addSeparator(); // 区切り線を追加
 
-        // --- ペンサイズをPenSizeサブメニューにまとめる ---
+        // ペンサイズをPenSizeサブメニューにまとめる
         JMenu penSizeMenu = new JMenu("PenSize");
         String[] penSizes = { "Small", "Medium", "Large" };
         for (String size : penSizes) {
@@ -145,7 +145,7 @@ public class View extends JPanel {
         }
         MenuDisplay.add(penSizeMenu);
 
-        // --- カラーパレット表示メニュー項目を追加 ---
+        // カラーパレット表示メニュー項目を追加
         JMenuItem chooseColorItem = new JMenuItem("色を選択...");
         chooseColorItem.addActionListener(e -> {
             Color newColor = JColorChooser.showDialog(View.this, "色を選択", model.getPenColor());
@@ -157,7 +157,7 @@ public class View extends JPanel {
         });
         MenuDisplay.add(chooseColorItem);
 
-        // --- スピード選択用JSliderを追加 ---
+        // スピード選択用JSliderを追加
         MenuDisplay.addSeparator(); // 区切り線を追加
 
         // スライダーとラベルを格納するためのパネル
@@ -239,7 +239,7 @@ public class View extends JPanel {
         g2d.translate(viewOffset.x, viewOffset.y);
         g2d.scale(scale, scale);
 
-        // --- 中心点の描画（r=2） ---
+        // 中心点の描画（r=2）
         // スパーギア中心
         Point2D.Double spurPosition = model.getSpurGearPosition();
         if (spurPosition != null) {
@@ -472,7 +472,9 @@ public class View extends JPanel {
      */
     public void zoomAt(Point screenPoint, double zoomFactor) {
         // 現在のスクリーン座標での中心点をワールド座標に変換
-        Point2D.Double worldPointBeforeZoom = screenToWorld(screenPoint);
+        // viewOffsetとscaleを考慮して、現在の表示状態でのワールド座標を取得
+        double worldX = (screenPoint.getX() - viewOffset.x) / scale;
+        double worldY = (screenPoint.getY() - viewOffset.y) / scale;
 
         // 新しいスケールを計算し、範囲内に収める
         double newScale = scale * zoomFactor;
@@ -490,15 +492,12 @@ public class View extends JPanel {
         // 新しいスケールを設定
         scale = newScale;
 
-        // ズーム後のスクリーン座標での中心点
-        Point2D.Double screenPointAfterZoom = new Point2D.Double(
-            worldPointBeforeZoom.x * scale + viewOffset.x,
-            worldPointBeforeZoom.y * scale + viewOffset.y
-        );
-
-        // ズーム後のオフセットを計算
-        viewOffset.x += (screenPoint.x - screenPointAfterZoom.x);
-        viewOffset.y += (screenPoint.y - screenPointAfterZoom.y);
+        // 新しいスケールとワールド座標のズーム中心点から、新しいオフセットを計算する
+        // (screenPoint.x - newViewOffsetX) / newScale = worldX
+        // screenPoint.x - newViewOffsetX = worldX * newScale
+        // newViewOffsetX = screenPoint.x - (worldX * newScale)
+        viewOffset.x = screenPoint.getX() - (worldX * newScale);
+        viewOffset.y = screenPoint.getY() - (worldY * newScale);
 
         repaint();
     }
@@ -676,7 +675,7 @@ public class View extends JPanel {
     public void setLocusData(List<Point2D.Double> locus, Color penColor, double penSize) {
         this.loadedLocusData = locus;
         this.loadedPenColor = penColor;
-        this.loadedPenSize = penSize; // ここを修正：-1.0ではなくpenSizeをセット
+        this.loadedPenSize = penSize;
         repaint();
     }
 
@@ -738,11 +737,11 @@ public class View extends JPanel {
         Point2D pinionCenter = model.getPinionGearPosition();
         double pinionRadius = model.getPinionGearRadius();
 
-        if (spurCenter != null && world.distance(spurCenter) < 10 / scale) { // スケールを考慮
+        if (spurCenter != null && world.distance(spurCenter) < 10 / scale) {
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-        } else if (spurCenter != null && Math.abs(world.distance(spurCenter) - spurRadius) < 10 / scale) { // スケールを考慮
+        } else if (spurCenter != null && Math.abs(world.distance(spurCenter) - spurRadius) < 10 / scale) {
             setCursor(Cursor.getPredefinedCursor(Cursor.SE_RESIZE_CURSOR));
-        } else if (pinionCenter != null && world.distance(pinionCenter) < 10 / scale) { // スケールを考慮
+        } else if (pinionCenter != null && world.distance(pinionCenter) < 10 / scale) {
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         } else {
             setCursor(Cursor.getDefaultCursor());
@@ -759,5 +758,47 @@ public class View extends JPanel {
     public void showPenTip() {
         showPenTip = true;
         repaint();
+    }
+
+    // --- テスト用のゲッターメソッド ---
+
+    /**
+     * 現在の保存メッセージを取得
+     * @return 保存メッセージ
+     */
+    public String getSaveMessage() {
+        return saveMessage;
+    }
+
+    /**
+     * スパーギア定義中フラグの状態を取得
+     * @return スパーギア定義中であればtrue
+     */
+    public boolean isDefiningSpurGear() {
+        return isDefiningSpurGear;
+    }
+
+    /**
+     * スパーギア中心（スクリーン座標）を取得
+     * @return スパーギア中心のスクリーン座標
+     */
+    public Point getSpurGearCenterScreen() {
+        return spurGearCenterScreen;
+    }
+
+    /**
+     * スパーギアドラッグ点（スクリーン座標）を取得
+     * @return スパーギアドラッグ点のスクリーン座標
+     */
+    public Point getCurrentDragPointScreen() {
+        return currentDragPointScreen;
+    }
+
+    /**
+     * ペン先表示フラグの状態を取得
+     * @return ペン先が表示されていればtrue
+     */
+    public boolean isShowPenTip() {
+        return showPenTip;
     }
 }
