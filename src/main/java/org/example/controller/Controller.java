@@ -49,6 +49,19 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         view.addMouseListener(this);
         view.addMouseMotionListener(this);
         view.addMouseWheelListener(this);
+
+        Point2D pinionCenter = model.getPinionGearPosition();
+        double pinionRadius = model.getPinionGearRadius();
+
+        double angle = Math.toRadians(45);
+        double penDistance = pinionRadius * 0.7;
+        double penX = pinionCenter.getX() + penDistance * Math.cos(angle);
+        double penY = pinionCenter.getY() + penDistance * Math.sin(angle);
+
+        Point2D initialPenPosition = new Point2D.Double(penX, penY);
+        model.setPenPosition(initialPenPosition);
+        model.setPenVisible(true);
+
     }
 
     public void mouseWheelMoved(MouseWheelEvent e_wheel) {
@@ -63,7 +76,18 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
         Point2D pinionCenter = model.getPinionGearPosition();
         double distance = worldClicked.distance(pinionCenter);
         double radius = model.getPinionGearRadius();
-        if (distance <= radius) {
+        if (distance <= radius * 0.9) {
+            double minDistance = 10.0;
+            Point2D penPosition = worldClicked;
+
+            if (distance < minDistance) {
+                double offset = minDistance - distance + 1.0;
+                penPosition = new Point2D.Double(
+                    pinionCenter.getX() + offset / Math.sqrt(2),
+                    pinionCenter.getY() - offset / Math.sqrt(2)
+                );
+            }
+
             model.setPenPosition(worldClicked);
             model.setPenVisible(true);
             view.repaint();
