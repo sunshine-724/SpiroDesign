@@ -34,7 +34,8 @@ import javax.swing.event.ChangeListener;
 import javax.swing.JLabel;
 import java.util.Hashtable;
 import java.text.DecimalFormat;
-import javax.swing.filechooser.FileNameExtensionFilter; // 追加: ファイルフィルタ用
+import javax.swing.filechooser.FileNameExtensionFilter;
+import org.example.lib.PathSegment; // 追加: PathSegmentをインポート
 
 /**
  * スピログラフアプリケーションのViewクラス。
@@ -73,12 +74,12 @@ public class View extends JPanel {
     /** ピニオンギアドラッグ点（スクリーン座標） */
     private Point currentDragPointScreenForPinion = null;
 
-    /** ロードされた軌跡データ */
-    private List<Point2D.Double> loadedLocusData = null;
+    // ロードされた軌跡データをPathSegmentのリストで管理
+    private List<PathSegment> loadedPathSegments = null; // loadedLocusData から変更
     /** ロードされたペン色 */
-    private Color loadedPenColor = null;
+    private Color loadedPenColor = null; // ロードされたペンの色は、loadedPathSegmentsの最後のセグメントの色か、Modelの現在のペンの色を反映する
     /** ロードされたペンサイズ */
-    private double loadedPenSize = -1.0;
+    private double loadedPenSize = -1.0; // ロードされたペンのサイズ
 
     /** 保存メッセージ */
     private String saveMessage = null;
@@ -101,7 +102,7 @@ public class View extends JPanel {
     private DecimalFormat percentFormat = new DecimalFormat("0.0%");
 
     /** ファイル拡張子定義 */
-    private static final String SPIRO_EXTENSION = "spiro"; // 新たに定義
+    private static final String SPIRO_EXTENSION = "spiro";
 
     /** メニューボタンリスナーを登録 */
     public void setMenuButtonListener(MenuButtonListener listener) {
@@ -262,6 +263,7 @@ public class View extends JPanel {
             displayPinion(g2d, pinionPosition);
         }
 
+        // displaySpirographLocusの呼び出しを変更
         displaySpirographLocus(g2d);
 
         Point2D.Double penPosition = model.getPenPosition();
@@ -369,7 +371,7 @@ public class View extends JPanel {
      * @param position 座標
      * @param color 色
      */
-    public void displayMousePointer(Graphics2D g, Point2D.Double position, Color color) {
+    public void displayMousePointer(Graphics2D g, Point2D.Double position, Color color) { // Point22D.DoubleをPoint2D.Doubleに修正
         // 未実装
     }
 
@@ -419,34 +421,39 @@ public class View extends JPanel {
 
     /**
      * スピログラフの軌跡を描画
+     * LoadedPathSegmentsまたはModelからPathSegmentsを取得して描画する。
      * @param g2d グラフィックス2D
      */
     private void displaySpirographLocus(Graphics2D g2d) {
         Color originalColor = g2d.getColor();
         java.awt.Stroke originalStroke = g2d.getStroke();
 
-        List<Point2D.Double> locusToDraw;
-        Color penColorToUse;
+        List<PathSegment> segmentsToDraw;
         double penSizeToUse;
 
-        if (loadedLocusData != null && !loadedLocusData.isEmpty() && loadedPenColor != null && loadedPenSize != -1.0) {
-            locusToDraw = loadedLocusData;
-            penColorToUse = loadedPenColor;
-            penSizeToUse = loadedPenSize;
+        // ロードされたデータがある場合はそれを使用し、ない場合はModelから取得
+        if (loadedPathSegments != null && !loadedPathSegments.isEmpty()) {
+            segmentsToDraw = loadedPathSegments;
+            penSizeToUse = loadedPenSize != -1.0 ? loadedPenSize : model.getPenSize();
         } else {
-            locusToDraw = model.getLocus();
-            penColorToUse = model.getPenColor();
+            segmentsToDraw = model.getPathSegments(); // ModelからPathSegmentのリストを取得
             penSizeToUse = model.getPenSize();
         }
 
-        g2d.setColor(penColorToUse);
         g2d.setStroke(new BasicStroke((float) penSizeToUse));
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        if (locusToDraw != null && locusToDraw.size() > 1) {
-            for (int i = 0; i < locusToDraw.size() - 1; i++) {
-                Point2D.Double p1 = locusToDraw.get(i);
-                Point2D.Double p2 = locusToDraw.get(i + 1);
-                g2d.drawLine((int) p1.x, (int) p1.y, (int) p2.x, (int) p2.y);
+        if (segmentsToDraw != null) {
+            for (PathSegment segment : segmentsToDraw) {
+                g2d.setColor(segment.getColor()); // セグメントの色を設定
+                List<Point2D.Double> points = segment.getPoints();
+                if (points != null && points.size() > 1) {
+                    for (int i = 0; i < points.size() - 1; i++) {
+                        Point2D.Double p1 = points.get(i);
+                        Point2D.Double p2 = points.get(i + 1);
+                        g2d.drawLine((int) p1.x, (int) p1.y, (int) p2.x, (int) p2.y);
+                    }
+                }
             }
         }
 
@@ -687,12 +694,13 @@ public class View extends JPanel {
 
     /**
      * 軌跡データ・ペン情報をViewにセット
-     * @param locus 軌跡
-     * @param penColor ペン色
-     * @param penSize ペンサイズ
+     * (ModelからPathSegmentのリストを受け取るように変更)
+     * @param loadedPathSegments 軌跡のデータ (PathSegmentのリスト)
+     * @param penColor  ペンの色 (現在のペンの色を反映するが、主に過去の軌跡には使用されない)
+     * @param penSize   ペンのサイズ
      */
-    public void setLocusData(List<Point2D.Double> locus, Color penColor, double penSize) {
-        this.loadedLocusData = locus;
+    public void setLocusData(List<PathSegment> loadedPathSegments, Color penColor, double penSize) { // 引数を変更
+        this.loadedPathSegments = loadedPathSegments; // loadedLocusData から変更
         this.loadedPenColor = penColor;
         this.loadedPenSize = penSize;
         repaint();
@@ -702,7 +710,7 @@ public class View extends JPanel {
      * ロード済み軌跡データをクリア
      */
     public void clearLoadedLocusData() {
-        this.loadedLocusData = null;
+        this.loadedPathSegments = null; // loadedLocusData から変更
         this.loadedPenColor = null;
         this.loadedPenSize = -1.0;
         repaint();

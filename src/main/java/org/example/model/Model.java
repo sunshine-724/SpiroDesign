@@ -13,7 +13,8 @@ import javax.swing.Timer;
 
 import org.example.spiroIO.SpiroIO;
 import org.example.view.View;
-import org.example.lib.*;
+import org.example.lib.Pair;
+import org.example.lib.PathSegment; // 追加: PathSegmentをインポート
 
 /*
  * Modelクラスは、Spiro.appのデータを管理するクラス。
@@ -49,13 +50,15 @@ public class Model implements Serializable { // Serializableを実装
      */
     private transient Timer timer; // transientとしてマーク
 
-    List<Point2D.Double> locus = new ArrayList<>(); // Locus of the pen
+    // 軌跡をPathSegmentのリストで管理するように変更
+    private List<PathSegment> pathSegments; // locus から変更
+    private transient PathSegment currentPathSegment; // 現在描画中のセグメント (transientとしてマーク)
 
     /** 描画開始時刻(ミリ秒) */
-    private long startTime; // 宣言を追加
+    private long startTime;
 
     /** 一時停止時間(ミリ秒) */
-    private long pauseTime; // 宣言を追加
+    private long pauseTime;
 
     /**
      * 1ミリ秒あたりのフレーム数
@@ -71,8 +74,8 @@ public class Model implements Serializable { // Serializableを実装
      */
     public Model() {
         // コンストラクタでギアを初期化する代わりに、resetGears()を呼び出す
-        resetGears(); // 初期化もresetGears()で行う
-        initializeTransientFields(); // transientフィールドの初期化を呼び出す
+        initializeTransientFields(); // まずtransientフィールドを初期化
+        resetGears(); // ギアとパスを初期化
     }
 
     /**
@@ -82,7 +85,7 @@ public class Model implements Serializable { // Serializableを実装
     private void initializeTransientFields() {
         spiroIO = new SpiroIO();
         views = new ArrayList<>(); // 再度初期化
-        timer = new Timer(FRAME_PER_MILLISECOND, e -> { // FRAME_PER_MILLISEensecond を修正
+        timer = new Timer(FRAME_PER_MILLISECOND, e -> {
             updateData(); // データ更新
             // Modelが更新されたらViewに再描画を通知
             // ModelはViewに依存しないが、Modelの状態が変更されたことをViewに伝える必要がある
@@ -90,8 +93,6 @@ public class Model implements Serializable { // Serializableを実装
                 view.repaint();
             }
         });
-        // デシリアライズ後にstart()やstop()が呼ばれるまでtimerは停止状態なので、startTime/pauseTimeはここでリセットしない。
-        // resetGears()でリセットされることを想定。
     }
 
     /**
@@ -101,8 +102,28 @@ public class Model implements Serializable { // Serializableを実装
     private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject(); // デフォルトのデシリアライズ処理を実行
         initializeTransientFields(); // transientフィールドを再初期化
-        // タイマーは停止した状態でロードされるため、ロードされた開始時刻と停止時刻を適切に設定
-        // これはloadDataでModelの状態を置き換えた後に処理するべきかもしれない
+        // ロードされたパスセグメントに基づいてcurrentPathSegmentを再構築
+        if (pathSegments != null && !pathSegments.isEmpty()) {
+            // 最後のセグメントを現在のペン色で新しいセグメントとして開始
+            // ロードされたセグメントの最後の点を引き継ぐ
+            PathSegment lastLoadedSegment = pathSegments.get(pathSegments.size() - 1);
+            if (!lastLoadedSegment.getPoints().isEmpty()) {
+                currentPathSegment = new PathSegment(lastLoadedSegment.getColor(), new ArrayList<>(lastLoadedSegment.getPoints()));
+            } else {
+                currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
+            }
+            // ロードされたリストから最後のセグメントを削除し、currentPathSegmentで拡張できるようにする
+            pathSegments.remove(pathSegments.size() - 1);
+        } else {
+            // ロードされたパスがない場合、新しいセグメントを開始
+            currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
+            pathSegments = new ArrayList<>(); // pathSegmentsも初期化
+        }
+
+        // ロードされたModelの状態を反映
+        stop(); // ロード後はアニメーションを停止状態にする
+        pauseTime = 0; // ロード後は一時停止時間をリセット
+        startTime = System.currentTimeMillis(); // 開始時刻もリセットして、再開時に正しく動作するようにする
     }
 
 
@@ -144,19 +165,24 @@ public class Model implements Serializable { // Serializableを実装
         // ペンの位置を取得
         Point2D.Double penPosition = pinionGear.getPen().getPosition();
 
-        locus.add(penPosition);
+        // currentPathSegmentがnullの場合は初期化（通常はresetGearsやreadObjectで初期化される）
+        if (currentPathSegment == null) {
+            currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
+            pathSegments.add(currentPathSegment);
+        }
+        currentPathSegment.addPoint(penPosition);
     }
 
     /**
      * ロード後Viewにデータの更新を通知する。
      *
-     * @param locusData 軌跡のデータ
+     * @param loadedPathSegments 軌跡のデータ (PathSegmentのリスト)
      * @param penColor  ペンの色
      * @param penSize   ペンのサイズ
      */
-    private void notifyViewsLoading(List<Point2D.Double> locusData, Color penColor, double penSize) {
+    private void notifyViewsLoading(List<PathSegment> loadedPathSegments, Color penColor, double penSize) { // 引数を変更
         for (View view : views) {
-            view.setLocusData(locusData, penColor, penSize);
+            view.setLocusData(loadedPathSegments, penColor, penSize); // ViewのsetLocusDataも変更が必要
         }
     }
 
@@ -185,13 +211,33 @@ public class Model implements Serializable { // Serializableを実装
     }
 
     /**
-     * 軌跡を取得する。
-     * 軌跡は、ピニオンギアのペンが描いた点のリスト。
-     *
-     * @return ピニオンギアのペンが描いた点のリスト。
+     * 軌跡の取得メソッドを変更
+     * @return PathSegmentのリストと現在のPathSegmentを結合したリスト
      */
-    public List<Point2D.Double> getLocus() {
-        return locus;
+    public List<PathSegment> getPathSegments() { // getLocus() から変更
+        // 現在描画中のセグメントも常に含めるようにする
+        List<PathSegment> allSegments = new ArrayList<>(pathSegments);
+        // currentPathSegmentが空でなければ追加 (描画中に点が追加されるため、この時点で追加する)
+        if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
+            allSegments.add(new PathSegment(currentPathSegment.getColor(), new ArrayList<>(currentPathSegment.getPoints())));
+        }
+        return allSegments;
+    }
+
+    /**
+     * ペンの色を変更する。
+     * 色を変更する際に、現在の描画セグメントを終了し、新しい色のセグメントを開始する。
+     * @param newColor 新しいペンの色
+     */
+    public void changePenColor(Color newColor) {
+        // 現在のセグメントが空でなく、新しい色と異なる場合のみ、セグメントを終了し新しいものを開始
+        if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty() && !currentPathSegment.getColor().equals(newColor)) {
+            pathSegments.add(currentPathSegment); // 現在のセグメントをリストに追加
+        }
+        // ペンの色を更新
+        pinionGear.getPen().changeColor(newColor);
+        // 新しい色のセグメントを開始
+        currentPathSegment = new PathSegment(newColor);
     }
 
     /**
@@ -289,7 +335,6 @@ public class Model implements Serializable { // Serializableを実装
         spurGear.setPosition(new Point2D.Double(spurGear.getSpurPosition().x + dx,
                 spurGear.getSpurPosition().y + dy));
 
-        // このメソッドはピニオンギアの他にペンも同時に動く。
         pinionGear.setPosition(new Point2D.Double(pinionGear.getPinionPosition().x + dx,
                 pinionGear.getPinionPosition().y + dy));
     }
@@ -472,32 +517,45 @@ public class Model implements Serializable { // Serializableを実装
                 // ロードされたデータで現在のモデルの状態を更新
                 this.spurGear = loadedModel.getSpurGear();
                 this.pinionGear = loadedModel.getPinionGear();
-                this.locus = loadedModel.getLocus();
-                // transientフィールドはデシリアライズされないので、readObject()で再初期化される
-                // ここでは、ロードされたペンの状態を現在のピニオンギアのペンに反映させる
+                this.pathSegments = loadedModel.getPathSegments(); // locus から変更
+
+                // ロードされたペンの状態を現在のピニオンギアのペンに反映させる
                 this.pinionGear.getPen().setPosition(loadedPen.getPosition());
                 this.pinionGear.getPen().setPenSize(loadedPen.getPenSize());
                 this.pinionGear.getPen().changeColor(loadedPen.getColor());
 
-                // ロード時にタイマーが再開されないように stop() を呼び出す。
-                // start/pauseTimeもリセットされるべきだが、それはloadDataの呼び出し元（Controller）
-                // またはModelのresetGears()で行うのが望ましい。
-                this.pauseTime = 0; // ロード後は一時停止時間をリセット
-                this.startTime = System.currentTimeMillis(); // 開始時刻もリセットして、再開時に正しく動作するようにする
-                stop(); // ロード後はアニメーションを停止状態にする（Controllerでも行うが念のため）
+                this.pauseTime = 0;
+                this.startTime = System.currentTimeMillis();
+                stop();
 
+                // ロードされたパスセグメントをViewに通知する (locusDataから変更)
+                notifyViewsLoading(this.pathSegments, this.pinionGear.getPen().getColor(), this.pinionGear.getPen().getPenSize());
 
-                notifyViewsLoading(this.locus, this.pinionGear.getPen().getColor(), this.pinionGear.getPen().getPenSize()); // Viewにデータの更新を通知
+                // ロード後にcurrentPathSegmentを適切に設定する
+                if (pathSegments != null && !pathSegments.isEmpty()) {
+                    // 最後のセグメントをcurrentPathSegmentとして再開
+                    // ロードされたセグメントの最後の点を引き継ぐ
+                    PathSegment lastLoadedSegment = pathSegments.get(pathSegments.size() - 1);
+                    if (!lastLoadedSegment.getPoints().isEmpty()) {
+                        currentPathSegment = new PathSegment(lastLoadedSegment.getColor(), new ArrayList<>(lastLoadedSegment.getPoints()));
+                    } else {
+                        currentPathSegment = new PathSegment(this.pinionGear.getPen().getColor());
+                    }
+                    pathSegments.remove(pathSegments.size() - 1); // Remove the last segment as it will be extended
+                } else {
+                    // If no path segments loaded, start a new one
+                    currentPathSegment = new PathSegment(this.pinionGear.getPen().getColor());
+                    pathSegments = new ArrayList<>(); // pathSegmentsも初期化
+                }
 
-                return true; // 読み込みに成功した場合はtrueを返す
+                return true;
             } else {
                 System.err.println("Failed to load data: No data found in the file.");
-                return false; // 読み込みに失敗した場合はfalseを返す
+                return false;
             }
         } catch (Exception e) {
             System.err.println("Error loading data: " + e.getMessage());
-            // エラーメッセージを表示するなどの処理を追加
-            return false; // 読み込みに失敗した場合はfalseを返す
+            return false;
         }
     }
 
@@ -512,12 +570,25 @@ public class Model implements Serializable { // Serializableを実装
      * @return 保存に成功した場合はtrue、失敗した場合はfalseを返す。
      */
     public Boolean saveData(File file, Model model, Pen pen) {
+        // 保存する前に現在のセグメントをpathSegmentsに追加
+        // currentPathSegmentがnullでなく、かつ点が含まれている場合のみ追加
+        if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
+            pathSegments.add(currentPathSegment);
+        }
+
         try {
             spiroIO.saveSpiro(file, model, pen);
-            return true; // 保存に成功した場合はtrueを返す
+            return true;
         } catch (Exception e) {
             System.err.println("Error saving data: " + e.getMessage());
-            return false; // 保存に失敗した場合はfalseを返す
+            return false;
+        } finally {
+            // 保存後、currentPathSegmentをPathSegmentsから取り除き、再度有効な状態にする
+            // これにより、保存処理によってcurrentPathSegmentがpathSegmentsに永続化されず、
+            // その後の描画で点が引き続きcurrentPathSegmentに追加される
+            if (pathSegments != null && !pathSegments.isEmpty() && pathSegments.contains(currentPathSegment)) {
+                pathSegments.remove(currentPathSegment);
+            }
         }
     }
 
@@ -533,8 +604,10 @@ public class Model implements Serializable { // Serializableを実装
         this.pinionGear.getPen().setPenSize(Pen.DEFAULT_PEN_SIZE);
         this.pinionGear.getPen().changeColor(Pen.DEFAULT_COLOR);
 
-        // 軌跡もクリア
-        this.locus.clear();
+        // 軌跡もクリアし、新しいセグメントを開始
+        this.pathSegments = new ArrayList<>(); // locus から変更
+        this.currentPathSegment = new PathSegment(this.pinionGear.getPen().getColor()); // 新しいセグメントを開始
+
         this.pauseTime = 0; // 一時停止時間もリセット
         this.startTime = System.currentTimeMillis(); // 開始時間もリセット
     }

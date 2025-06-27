@@ -5,23 +5,21 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.geom.Point2D;
-import java.awt.Color; // Colorをインポート
-import java.io.File; // Fileをインポート
+import java.awt.Color;
+import java.io.File;
 
 import javax.swing.SwingUtilities;
 import javax.swing.event.MouseInputAdapter;
 
 import org.example.model.Model;
 import org.example.view.View;
-// import org.example.model.SpurGear; // 不要になったため削除
-// import org.example.model.PinionGear; // 不要になったため削除
 
 
 /**
  * Controllerクラスは、ビューとモデルを結びつけ、マウスイベントを処理する。
  * ユーザーの操作に応じて、モデルの状態を更新し、ビューを再描画する。
  */
-public class Controller extends MouseInputAdapter implements MouseWheelListener, View.MenuButtonListener { // View.MenuButtonListenerを実装
+public class Controller extends MouseInputAdapter implements MouseWheelListener, View.MenuButtonListener {
     protected Model model;
     protected View view;
 
@@ -42,9 +40,9 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
     }
 
     private DraggingMode draggingMode = DraggingMode.NONE;
-    private Point pressPoint; // ドラッグ開始時のスクリーン座標
-    private Point2D pressWorldPoint; // ドラッグ開始時のワールド座標
-    private boolean isInner = true; // ピニオンギアがスパーギアの内側にあるかどうかのフラグ
+    private Point pressPoint;
+    private Point2D pressWorldPoint;
+    private boolean isInner = true;
 
     /**
      * コンストラクタ
@@ -56,8 +54,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
         this.model = model;
         view.addMouseListener(this);
         view.addMouseMotionListener(this);
-        // MenuButtonListenerをViewに設定
-        view.setMenuButtonListener(this); // ここでリスナーを設定
+        view.setMenuButtonListener(this);
     }
 
     /**
@@ -68,11 +65,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
     @Override
     public void mouseWheelMoved(MouseWheelEvent e_wheel) {
         double rotation = e_wheel.getPreciseWheelRotation();
-
-        // 拡大・縮小率の計算：回転が小さいほど緩やかにズームする
         double zoomFactor = Math.pow(1.1, -rotation);
-
-        // マウスカーソル位置を中心にズームを実行（View クラス側で処理）
         view.zoomAt(e_wheel.getPoint(), zoomFactor);
     }
 
@@ -89,13 +82,12 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
         double distance = worldClicked.distance(pinionCenter);
         double radius = model.getPinionGearRadius();
 
-        // クリック位置がピニオンギアの半径内であればペンの位置を設定
         if (distance <= radius) {
             model.setPenPosition(worldClicked);
             view.repaint();
             return;
         }
-        model.mouseClicked(clickedpoint); // その他のモデル処理
+        model.mouseClicked(clickedpoint);
     }
 
     /**
@@ -105,10 +97,9 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
      */
     @Override
     public void mousePressed(MouseEvent e_press) {
-        this.pressPoint = e_press.getPoint(); // ドラッグ開始点を記録
-        this.pressWorldPoint = view.screenToWorld(this.pressPoint); // ドラッグ開始点のワールド座標を記録
+        this.pressPoint = e_press.getPoint();
+        this.pressWorldPoint = view.screenToWorld(this.pressPoint);
 
-        // 右クリック（ポップアップトリガー）であればメニュー表示
         if (e_press.isPopupTrigger() || SwingUtilities.isRightMouseButton(e_press)) {
             view.showMenu(pressPoint.x, pressPoint.y);
             return;
@@ -123,9 +114,6 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
         double distToPinion = (pinionCenter != null) ? pressWorldPoint.distance(pinionCenter) : Double.MAX_VALUE;
         double distToPen = (penPosition != null) ? pressWorldPoint.distance(penPosition) : Double.MAX_VALUE;
 
-
-        // クリック位置に基づいてドラッグモードを決定
-        // スケールを考慮したヒット判定
         double hitTolerance = 10.0 / view.getScale();
 
         if (spurCenter != null && distToSpur < hitTolerance) {
@@ -135,13 +123,12 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
         } else if (pinionCenter != null && distToPinion < hitTolerance) {
             draggingMode = DraggingMode.MOVE_PINION;
         } else if (penPosition != null && distToPen < hitTolerance) {
-            // ペンのドラッグは現在未対応（NONEに設定）
             draggingMode = DraggingMode.NONE;
         } else {
-            draggingMode = DraggingMode.PAN; // いずれにも該当しない場合はパンモード
+            draggingMode = DraggingMode.PAN;
         }
 
-        model.mousePressed(pressPoint); // モデルへの通知
+        model.mousePressed(pressPoint);
     }
 
     /**
@@ -152,7 +139,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
     @Override
     public void mouseReleased(MouseEvent e_release) {
         draggingMode = DraggingMode.NONE;
-        model.mouseReleased(e_release.getPoint()); // モデルへの通知
+        model.mouseReleased(e_release.getPoint());
     }
 
     /**
@@ -165,7 +152,6 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
         Point currentPoint = e_drag.getPoint();
         Point2D currentWorld = view.screenToWorld(currentPoint);
 
-        // ワールド座標での移動量を計算
         double dx = currentWorld.getX() - pressWorldPoint.getX();
         double dy = currentWorld.getY() - pressWorldPoint.getY();
 
@@ -184,26 +170,26 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
 
             case MOVE_PINION:
                 Point2D spurCenter = model.getSpurGearPosition();
-                if (spurCenter == null) break; // スパーギアがnullなら処理しない
+                if (spurCenter == null) break;
 
                 double spurRadius = model.getSpurGearRadius();
 
                 double dxRaw = currentWorld.getX() - spurCenter.getX();
                 double dyRaw = currentWorld.getY() - spurCenter.getY();
                 double dist = Math.hypot(dxRaw, dyRaw);
-                if (dist < 5.0 / view.getScale()) break; // スケールを考慮した最小距離
+                if (dist < 5.0 / view.getScale()) break;
 
                 double unitX = dxRaw / dist;
                 double unitY = dyRaw / dist;
 
                 double newPinionRadius = Math.abs(spurRadius - dist);
 
-                double minRadius = 5.0; // 最小半径
+                double minRadius = 5.0;
                 if (newPinionRadius < minRadius) {
                     newPinionRadius = minRadius;
                 }
 
-                double hysteresis = 2.0 / view.getScale(); // スケールを考慮したヒステリシス
+                double hysteresis = 2.0 / view.getScale();
                 double innerLimit = spurRadius - newPinionRadius + hysteresis;
                 double outerLimit = spurRadius + newPinionRadius - hysteresis;
 
@@ -227,16 +213,12 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
 
                 model.setPinionGearPosition(newCenter);
                 model.changePinionGearRadius(newPinionRadius);
-                // ペンはピニオンギアの移動に応じてModelのupdateData()で更新されるか、
-                // あるいはModelのmovePenBy()で別途移動させる。
-                // ここではModelのmovePenBy()の呼び出しは残す。
                 model.movePenBy(dx, dy);
                 break;
 
             case PAN:
-                // スクリーン座標での移動量を計算してパン
-                int panDx = currentPoint.x - this.pressPoint.x; // 正しいドラッグ開始点を使用
-                int panDy = currentPoint.y - this.pressPoint.y; // 正しいドラッグ開始点を使用
+                int panDx = currentPoint.x - this.pressPoint.x;
+                int panDy = currentPoint.y - this.pressPoint.y;
                 view.pan(panDx, panDy);
                 break;
 
@@ -244,12 +226,11 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
                 break;
         }
 
-        // 次のドラッグイベントのために、現在の点を前回のドラッグ開始点として設定
         this.pressPoint = currentPoint;
         this.pressWorldPoint = currentWorld;
 
-        view.repaint(); // ビューを再描画
-        model.mouseDragged(currentPoint); // モデルへの通知（必要であれば）
+        view.repaint();
+        model.mouseDragged(currentPoint);
     }
 
     /**
@@ -267,17 +248,15 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
                 model.stop();
                 break;
             case "Clear":
-                // Model内のresetGears()メソッドを呼び出し、ギアとペンをリセットする
                 model.resetGears();
-                model.stop(); // 描画を停止
-
-                view.clearLoadedLocusData(); // ロードされた軌跡データもクリア
+                model.stop();
+                view.clearLoadedLocusData();
                 view.repaint();
                 break;
             case "Save":
                 File saveFile = view.chooseSaveFile();
                 if (saveFile != null) {
-                    if (model.saveData(saveFile, model, model.getPinionGear().getPen())) { // getPinionGear()を使用
+                    if (model.saveData(saveFile, model, model.getPinionGear().getPen())) {
                         view.displaySaveSuccessMessage("保存しました！");
                     } else {
                         view.displaySaveSuccessMessage("保存に失敗しました。");
@@ -289,22 +268,24 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
                 if (loadFile != null) {
                     if (model.loadData(loadFile)) {
                         view.displaySaveSuccessMessage("読み込みました！");
-                        model.stop(); // 読み込み後に自動再生しない場合は停止
+                        model.stop();
                     } else {
                         view.displaySaveSuccessMessage("読み込みに失敗しました。");
                     }
                 }
                 break;
             case "Small":
-                model.getPinionGear().getPen().setPenSize(1.0); // getPinionGear()を使用
+                model.getPinionGear().getPen().setPenSize(1.0);
+                // ペンサイズ変更後も色セグメントを適切に処理する必要がある場合、
+                // model.changePenColor(model.getPenColor()); のように呼び出す
                 view.repaint();
                 break;
             case "Medium":
-                model.getPinionGear().getPen().setPenSize(3.0); // getPinionGear()を使用
+                model.getPinionGear().getPen().setPenSize(3.0);
                 view.repaint();
                 break;
             case "Large":
-                model.getPinionGear().getPen().setPenSize(5.0); // getPinionGear()を使用
+                model.getPinionGear().getPen().setPenSize(5.0);
                 view.repaint();
                 break;
             default:
@@ -319,7 +300,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
      */
     @Override
     public void onColorSelected(Color color) {
-        model.getPinionGear().getPen().changeColor(color); // getPinionGear()を使用
+        model.changePenColor(color); // Modelの新しい色変更メソッドを呼び出す
         view.repaint();
     }
 
