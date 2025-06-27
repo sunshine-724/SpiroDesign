@@ -126,10 +126,12 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
 
         switch (draggingMode) {
             case MOVE_SPUR_CENTER:
+                model.setPenVisible(false);
                 model.moveSpurGearBy(dx, dy);
                 break;
 
             case RESIZE_SPUR_RADIUS:
+                model.setPenVisible(false);
                 double newSpurRadius = currentWorld.distance(spurCenter);
                 if (newSpurRadius < 10.0) {
                     newSpurRadius = 10.0;
@@ -168,6 +170,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
                 break;
 
             case MOVE_PINION:
+                model.setPenVisible(false);
                 dxRaw = currentWorld.getX() - spurCenter.getX();
                 dyRaw = currentWorld.getY() - spurCenter.getY();
                 dist = Math.hypot(dxRaw, dyRaw);
@@ -210,11 +213,6 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener 
                 int panDy = currentPoint.y - pressPoint.y;
                 view.pan(panDx, panDy);
                 break;
-
-                if ((draggingMode == DraggingMode.MOVE_SPUR_CENTER || draggingMode == DraggingMode.MOVE_PINION)
-                && model.isPenVisible()) {
-                model.setPenVisible(false);
-            }
 
             default:
                 break;
