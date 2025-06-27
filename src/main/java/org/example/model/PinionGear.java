@@ -116,6 +116,15 @@ public class PinionGear extends SpiroGear {
     }
 
     /**
+     * ピニオンギアの速度を取得する。
+     * 
+     * @return ピニオンギアの現在の速度
+     */
+    public double getSpeed() {
+        return speed;
+    }
+
+    /**
      * ピニオンギアの座標を取得する。
      * 
      * @return ピニオンギアの現在の座標
