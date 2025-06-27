@@ -56,6 +56,11 @@ public class Main {
         // Controller は View のマウスイベントリスナーとして自身を登録するため、View の後にインスタンス化する。
         Controller controller = new Controller(view, model);
 
+        // --- ここから追加・変更 ---
+        // ViewにMouseWheelListenerを登録する
+        view.addMouseWheelListener(controller);
+        // --- ここまで追加・変更 ---
+
         // 3. View コンポーネントを JFrame に追加する。
         // View (JPanel を継承) を JFrame の中央領域に追加することで、ウィンドウいっぱいに View が表示される。
         frame.add(view, BorderLayout.CENTER);
