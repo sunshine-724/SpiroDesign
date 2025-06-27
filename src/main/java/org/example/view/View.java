@@ -35,7 +35,7 @@ import javax.swing.JLabel;
 import java.util.Hashtable;
 import java.text.DecimalFormat;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import org.example.lib.PathSegment;
+import org.example.lib.PathSegment; // 追加: PathSegmentをインポート
 
 /**
  * スピログラフアプリケーションのViewクラス。
@@ -74,12 +74,12 @@ public class View extends JPanel {
     /** ピニオンギアドラッグ点（スクリーン座標） */
     private Point currentDragPointScreenForPinion = null;
 
-    /** ロードされた軌跡データをPathSegmentのリストで管理 */
-    private List<PathSegment> loadedPathSegments = null;
+    // ロードされた軌跡データをPathSegmentのリストで管理
+    private List<PathSegment> loadedPathSegments = null; // loadedLocusData から変更
     /** ロードされたペン色 */
-    private Color loadedPenColor = null;
+    private Color loadedPenColor = null; // ロードされたペンの色は、loadedPathSegmentsの最後のセグメントの色か、Modelの現在のペンの色を反映する
     /** ロードされたペンサイズ */
-    private double loadedPenSize = -1.0;
+    private double loadedPenSize = -1.0; // ロードされたペンのサイズ
 
     /** 保存メッセージ */
     private String saveMessage = null;
@@ -104,13 +104,7 @@ public class View extends JPanel {
     /** ファイル拡張子定義 */
     private static final String SPIRO_EXTENSION = "spiro";
 
-    /** ファイルチューザー */
-    private JFileChooser fileChooser;
-
-    /**
-     * メニューボタンリスナーを登録
-     * @param listener リスナー
-     */
+    /** メニューボタンリスナーを登録 */
     public void setMenuButtonListener(MenuButtonListener listener) {
         this.menuButtonListener = listener;
     }
@@ -126,12 +120,6 @@ public class View extends JPanel {
         setBackground(Color.WHITE);
 
         MenuDisplay = new JPopupMenu();
-
-        // ファイルチューザーの初期化
-        fileChooser = new JFileChooser();
-        FileNameExtensionFilter filter = new FileNameExtensionFilter("Spiro Files (*.spiro)", SPIRO_EXTENSION);
-        fileChooser.setFileFilter(filter);
-        fileChooser.setCurrentDirectory(new File(System.getProperty("user.home"))); // デフォルトディレクトリ設定
 
         // MenuButtonListenerを介してアクションを処理する共通のActionListener
         ActionListener commonMenuListener = e -> {
@@ -150,7 +138,7 @@ public class View extends JPanel {
             MenuDisplay.add(item);
         }
 
-        MenuDisplay.addSeparator();
+        MenuDisplay.addSeparator(); // 区切り線を追加
 
         // ペンサイズをPenSizeサブメニューにまとめる
         JMenu penSizeMenu = new JMenu("PenSize");
@@ -168,44 +156,42 @@ public class View extends JPanel {
             Color newColor = JColorChooser.showDialog(View.this, "色を選択", model.getPenColor());
             if (newColor != null) {
                 if (menuButtonListener != null) {
-                    menuButtonListener.onColorSelected(newColor);
+                    menuButtonListener.onColorSelected(newColor); // 新しい色をリスナーに通知
                 }
             }
         });
         MenuDisplay.add(chooseColorItem);
 
         // スピード選択用JSliderを追加
-        MenuDisplay.addSeparator();
+        MenuDisplay.addSeparator(); // 区切り線を追加
 
+        // スライダーとラベルを格納するためのパネル
         JPanel speedPanel = new JPanel();
-        speedPanel.setLayout(new BoxLayout(speedPanel, BoxLayout.Y_AXIS));
-        JLabel speedLabel = new JLabel("スピード:");
-        speedLabel.setAlignmentX(CENTER_ALIGNMENT);
+        speedPanel.setLayout(new BoxLayout(speedPanel, BoxLayout.Y_AXIS)); // 垂直方向に要素を配置
 
-        // スライダーの最小値を1、最大値を10に変更し、現在のモデルの速度を新しいスケールに合わせる
-        // model.getPinionGearSpeed()は実際の速度 (0.1〜1.0) を返すため、スライダーの表示値 (1〜10) に変換
-        int initialSliderValue = (int) (model.getPinionGearSpeed() * 10.0);
-        // 新しい最小値と最大値に合わせてクランプ
-        if (initialSliderValue < 1) initialSliderValue = 1;
-        if (initialSliderValue > 10) initialSliderValue = 10;
-        JSlider speedSlider = new JSlider(JSlider.HORIZONTAL, 1, 10, initialSliderValue); // スライダーの範囲を1〜10に
+        JLabel speedLabel = new JLabel("スピード:");
+        speedLabel.setAlignmentX(CENTER_ALIGNMENT); // パネル内で中央揃え
+
+        int initialSpeed = (int) model.getPinionGearSpeed(); // Modelから実際の速度を取得
+        if (initialSpeed < 1) initialSpeed = 1;
+        if (initialSpeed > 100) initialSpeed = 100;
+
+
+        JSlider speedSlider = new JSlider(JSlider.HORIZONTAL, 1, 100, initialSpeed);
         speedSlider.setPaintTicks(true);
         speedSlider.setSnapToTicks(true);
-        speedSlider.setMajorTickSpacing(1); // 目盛り間隔を1に
-        speedSlider.setMinorTickSpacing(1); // 小目盛り間隔を1に
+
+        // カスタムラベルテーブルを作成
+        Hashtable<Integer, JLabel> labelTable = new Hashtable<>();
+        labelTable.put(1, new JLabel("1"));
+        labelTable.put(100, new JLabel("100"));
+        speedSlider.setLabelTable(labelTable);
         speedSlider.setPaintLabels(true);
 
-        // カスタムラベルテーブルを作成 (1から10まで)
-        Hashtable<Integer, JLabel> labels = new Hashtable<>();
-        for (int i = 1; i <= 10; i++) {
-            labels.put(i, new JLabel(String.valueOf(i)));
-        }
-        speedSlider.setLabelTable(labels);
-
+        // スライダーの値が変更されたときのリスナー
         speedSlider.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
-                // スライダーが調整中ではない場合のみイベントを通知
                 if (!speedSlider.getValueIsAdjusting()) {
                     if (menuButtonListener != null) {
                         menuButtonListener.onSpeedSelected(speedSlider.getValue());
@@ -213,18 +199,25 @@ public class View extends JPanel {
                 }
             }
         });
+
         speedPanel.add(speedLabel);
         speedPanel.add(speedSlider);
-        MenuDisplay.add(speedPanel);
 
-        setComponentPopupMenu(MenuDisplay); // 右クリックでメニュー表示
+        MenuDisplay.add(speedPanel); // パネルをポップアップメニューに追加
 
-        // メッセージ表示用タイマーの設定
+        speedDisplay = new JTextField("0.0");
+        speedDisplay.setEditable(true);
+
+        colorPalletDisplay = new JColorChooser();
+
+        setVisible(true);
+
         messageTimer = new Timer(MESSAGE_DISPLAY_DURATION, e -> {
             saveMessage = null;
-            repaint(); // メッセージ非表示後に再描画
+            repaint();
+            messageTimer.stop();
         });
-        messageTimer.setRepeats(false); // 一度だけ実行
+        messageTimer.setRepeats(false);
     }
 
     /**
@@ -236,11 +229,8 @@ public class View extends JPanel {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
-        // アンチエイリアシングを有効にする
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-        // 背景をクリア
         g2d.setColor(getBackground());
         g2d.fillRect(0, 0, getWidth(), getHeight());
 
@@ -248,106 +238,83 @@ public class View extends JPanel {
             return;
         }
 
-        // ビューの拡大縮小とパンを適用
         AffineTransform originalTransform = g2d.getTransform();
-        AffineTransform transform = new AffineTransform();
-        transform.translate(viewOffset.x, viewOffset.y);
-        transform.scale(scale, scale);
-        g2d.transform(transform);
 
-        // Modelからギアと軌跡のデータを取得して描画
-        Point2D.Double spurGearPos = model.getSpurGearPosition();
-        double spurGearRadius = model.getSpurGearRadius();
-        Color spurGearColor = model.getSpurGearColor();
+        // ズームとパンを適用
+        g2d.translate(viewOffset.x, viewOffset.y);
+        g2d.scale(scale, scale);
 
-        Point2D.Double pinionGearPos = model.getPinionGearPosition();
-        double pinionGearRadius = model.getPinionGearRadius();
-        Color pinionGearColor = model.getPinionGearColor();
+        // 中心点の描画（r=2）
+        // スパーギア中心
+        Point2D.Double spurPosition = model.getSpurGearPosition();
+        if (spurPosition != null) {
+            g2d.setColor(Color.RED);
+            int r = 2;
+            g2d.fillOval((int)(spurPosition.x - r), (int)(spurPosition.y - r), r * 2, r * 2);
+            displaySpur(g2d, spurPosition);
+        }
 
-        double penSize = model.getPenSize();
+        // ピニオンギア中心
+        Point2D.Double pinionPosition = model.getPinionGearPosition();
+        if (pinionPosition != null) {
+            g2d.setColor(Color.BLUE);
+            int r = 2;
+            g2d.fillOval((int)(pinionPosition.x - r), (int)(pinionPosition.y - r), r * 2, r * 2);
+            displayPinion(g2d, pinionPosition);
+        }
+
+        // displaySpirographLocusの呼び出しを変更
+        displaySpirographLocus(g2d);
+
+        Point2D.Double penPosition = model.getPenPosition();
         Color penColor = model.getPenColor();
-        Point2D.Double penPos = model.getPenPosition();
+        if (penPosition != null && showPenTip) {
+            displayDrawPen(g2d, penPosition, penColor);
+        }
 
-        // 描画ロジック (変更なし)
-        // 軌跡の描画
-        List<PathSegment> allPathSegments = model.getPathSegments();
-        if (allPathSegments != null) {
-            for (PathSegment segment : allPathSegments) {
-                g2d.setColor(segment.getColor());
-                List<Point2D.Double> points = segment.getPoints();
-                if (points.size() > 1) {
-                    g2d.setStroke(new BasicStroke((float) penSize, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    for (int i = 0; i < points.size() - 1; i++) {
-                        Point2D.Double p1 = points.get(i);
-                        Point2D.Double p2 = points.get(i + 1);
-                        g2d.drawLine((int) p1.x, (int) p1.y, (int) p2.x, (int) p2.y);
-                    }
-                }
+        // スパーギア定義中の仮描画
+        if (isDefiningSpurGear && spurGearCenterScreen != null) {
+            Point2D.Double centerWorld = screenToWorld(spurGearCenterScreen);
+            double tempRadius = 0;
+            if (currentDragPointScreen != null) {
+                // スケールを考慮して半径を計算
+                tempRadius = spurGearCenterScreen.distance(currentDragPointScreen) / scale;
             }
+
+            g2d.setColor(Color.ORANGE);
+            g2d.setStroke(new BasicStroke(1.5f));
+            double x = centerWorld.x - tempRadius;
+            double y = centerWorld.y - tempRadius;
+            g2d.drawOval((int) x, (int) y, (int) (tempRadius * 2), (int) (tempRadius * 2));
         }
 
-        // スパーギアの描画 (円)
-        if (spurGearPos != null) {
-            g2d.setColor(spurGearColor);
-            g2d.drawOval((int) (spurGearPos.x - spurGearRadius), (int) (spurGearPos.y - spurGearRadius),
-                    (int) (spurGearRadius * 2), (int) (spurGearRadius * 2));
+        // ピニオンギア定義中の仮描画
+        if (isDefiningPinionGear && pinionGearCenterScreen != null) {
+            Point2D.Double centerWorld = screenToWorld(pinionGearCenterScreen);
+            double tempRadius = 0;
+            if (currentDragPointScreenForPinion != null) {
+                // スケールを考慮して半径を計算
+                tempRadius = pinionGearCenterScreen.distance(currentDragPointScreenForPinion) / scale;
+            }
+
+            g2d.setColor(Color.MAGENTA);
+            g2d.setStroke(new BasicStroke(1.5f));
+            double x = centerWorld.x - tempRadius;
+            double y = centerWorld.y - tempRadius;
+            g2d.drawOval((int) x, (int) y, (int) (tempRadius * 2), (int) (tempRadius * 2));
         }
 
-        // ピニオンギアの描画 (円)
-        if (pinionGearPos != null) {
-            g2d.setColor(pinionGearColor);
-            g2d.drawOval((int) (pinionGearPos.x - pinionGearRadius), (int) (pinionGearPos.y - pinionGearRadius),
-                    (int) (pinionGearRadius * 2), (int) (pinionGearRadius * 2));
-        }
-
-        // ペンの描画
-        if (showPenTip && penPos != null) {
-            g2d.setColor(penColor);
-            g2d.fillOval((int) (penPos.x - penSize / 2), (int) (penPos.y - penSize / 2),
-                    (int) penSize, (int) penSize);
-        }
-
-        // スパーギア定義中のガイド描画
-        if (isDefiningSpurGear && spurGearCenterScreen != null && currentDragPointScreen != null) {
-            g2d.setTransform(originalTransform); // 座標変換をリセットしてスクリーン座標で描画
-            g2d.setColor(Color.LIGHT_GRAY);
-            Point2D.Double startWorld = screenToWorld(spurGearCenterScreen);
-            Point2D.Double endWorld = screenToWorld(currentDragPointScreen);
-            double currentRadius = startWorld.distance(endWorld);
-            g2d.drawOval((int) (spurGearCenterScreen.x - currentRadius * scale),
-                    (int) (spurGearCenterScreen.y - currentRadius * scale),
-                    (int) (currentRadius * scale * 2), (int) (currentRadius * scale * 2));
-            g2d.setTransform(transform); // 元の座標変換に戻す
-        }
-        // ピニオンギア定義中のガイド描画
-        if (isDefiningPinionGear && pinionGearCenterScreen != null && currentDragPointScreenForPinion != null) {
-            g2d.setTransform(originalTransform); // 座標変換をリセットしてスクリーン座標で描画
-            g2d.setColor(Color.LIGHT_GRAY);
-            Point2D.Double startWorld = screenToWorld(pinionGearCenterScreen);
-            Point2D.Double endWorld = screenToWorld(currentDragPointScreenForPinion);
-            double currentRadius = startWorld.distance(endWorld);
-            g2d.drawOval((int) (pinionGearCenterScreen.x - currentRadius * scale),
-                    (int) (pinionGearCenterScreen.y - currentRadius * scale),
-                    (int) (currentRadius * scale * 2), (int) (currentRadius * scale * 2));
-            g2d.setTransform(transform); // 元の座標変換に戻す
-        }
-
-        // 元の変換を復元
+        // 元のTransformに戻す
         g2d.setTransform(originalTransform);
 
-        // 保存メッセージの表示
-        if (saveMessage != null) {
-            drawSaveMessage(g2d); // drawSaveMessageメソッドを呼び出す
-        }
-
-        // 拡大縮小率の表示 (右下)
+        // スケール表示
         g2d.setColor(Color.BLACK);
-        g2d.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        String scaleText = percentFormat.format(scale);
-        FontMetrics fmScale = g2d.getFontMetrics();
-        int scaleX = getWidth() - fmScale.stringWidth(scaleText) - 10;
-        int scaleY = getHeight() - 10;
-        g2d.drawString(scaleText, scaleX, scaleY);
+        g2d.drawString("Scale: " + getScalePercent(), 10, getHeight() - 10);
+
+        // 保存メッセージ表示
+        if (saveMessage != null) {
+            drawSaveMessage(g2d);
+        }
     }
 
     /**
@@ -376,73 +343,427 @@ public class View extends JPanel {
     }
 
     /**
-     * スクリーン座標をワールド座標に変換する。
+     * ピニオンギアを描画
+     * @param g グラフィックス2D
+     * @param position ギア中心座標
+     */
+    public void displayPinion(Graphics2D g, Point2D.Double position) {
+        Color originalColor = g.getColor();
+        java.awt.Stroke originalStroke = g.getStroke();
+
+        g.setColor(Color.BLUE);
+        g.setStroke(new BasicStroke(2.0f));
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        double radius = model.getPinionGearRadius();
+        double x = position.x - radius;
+        double y = position.y - radius;
+
+        g.drawOval((int) x, (int) y, (int) (radius * 2), (int) (radius * 2));
+
+        g.setColor(originalColor);
+        g.setStroke(originalStroke);
+    }
+
+    /**
+     * マウスポインタを描画（未実装）
+     * @param g グラフィックス2D
+     * @param position 座標
+     * @param color 色
+     */
+    public void displayMousePointer(Graphics2D g, Point2D.Double position, Color color) { // Point22D.DoubleをPoint2D.Doubleに修正
+        // 未実装
+    }
+
+    /**
+     * スパーギアを描画
+     * @param g グラフィックス2D
+     * @param position ギア中心座標
+     */
+    public void displaySpur(Graphics2D g, Point2D.Double position) {
+        Color originalColor = g.getColor();
+        java.awt.Stroke originalStroke = g.getStroke();
+
+        g.setColor(Color.RED);
+        g.setStroke(new BasicStroke(2.0f));
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        double radius = model.getSpurGearRadius();
+        double x = position.x - radius;
+        double y = position.y - radius;
+
+        g.drawOval((int) x, (int) y, (int) (radius * 2), (int) (radius * 2));
+
+        g.setColor(originalColor);
+        g.setStroke(originalStroke);
+    }
+
+    /**
+     * ペンを描画
+     * @param g グラフィックス2D
+     * @param position ペン座標
+     * @param color ペン色
+     */
+    public void displayDrawPen(Graphics2D g, Point2D.Double position, Color color) {
+        Color originalColor = g.getColor();
+        java.awt.Stroke originalStroke = g.getStroke();
+
+        g.setColor(color != null ? color : Color.GREEN);
+        double penSize = model.getPenSize();
+        g.setStroke(new BasicStroke((float) penSize));
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        g.fillOval((int) (position.x - penSize / 2), (int) (position.y - penSize / 2), (int) penSize, (int) penSize);
+
+        g.setColor(originalColor);
+        g.setStroke(originalStroke);
+    }
+
+    /**
+     * スピログラフの軌跡を描画
+     * LoadedPathSegmentsまたはModelからPathSegmentsを取得して描画する。
+     * @param g2d グラフィックス2D
+     */
+    private void displaySpirographLocus(Graphics2D g2d) {
+        Color originalColor = g2d.getColor();
+        java.awt.Stroke originalStroke = g2d.getStroke();
+
+        List<PathSegment> segmentsToDraw;
+        double penSizeToUse;
+
+        // ロードされたデータがある場合はそれを使用し、ない場合はModelから取得
+        if (loadedPathSegments != null && !loadedPathSegments.isEmpty()) {
+            segmentsToDraw = loadedPathSegments;
+            penSizeToUse = loadedPenSize != -1.0 ? loadedPenSize : model.getPenSize();
+        } else {
+            segmentsToDraw = model.getPathSegments(); // ModelからPathSegmentのリストを取得
+            penSizeToUse = model.getPenSize();
+        }
+
+        g2d.setStroke(new BasicStroke((float) penSizeToUse));
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        if (segmentsToDraw != null) {
+            for (PathSegment segment : segmentsToDraw) {
+                g2d.setColor(segment.getColor()); // セグメントの色を設定
+                List<Point2D.Double> points = segment.getPoints();
+                if (points != null && points.size() > 1) {
+                    for (int i = 0; i < points.size() - 1; i++) {
+                        Point2D.Double p1 = points.get(i);
+                        Point2D.Double p2 = points.get(i + 1);
+                        g2d.drawLine((int) p1.x, (int) p1.y, (int) p2.x, (int) p2.y);
+                    }
+                }
+            }
+        }
+
+        g2d.setColor(originalColor);
+        g2d.setStroke(originalStroke);
+    }
+
+    /**
+     * スパーギアとピニオンギアの半径を連動して変更する
+     * @param newSpurRadius 新しいスパーギア半径
+     */
+    public void changeSpurAndPinionRadius(double newSpurRadius) {
+        double oldSpurRadius = model.getSpurGearRadius();
+        double oldPinionRadius = model.getPinionGearRadius();
+        if (oldSpurRadius == 0) return; // 0除算防止
+        double ratio = newSpurRadius / oldSpurRadius;
+        double newPinionRadius = oldPinionRadius * ratio;
+        model.setSpurRadius(newSpurRadius);
+        model.changePinionGearRadius(newPinionRadius);
+        repaint();
+    }
+
+    /**
+     * マウスカーソル位置を中心に拡大縮小する
+     * @param screenPoint スクリーン座標でのズーム中心点
+     * @param zoomFactor ズーム倍率
+     */
+    public void zoomAt(Point screenPoint, double zoomFactor) {
+        // 現在のスクリーン座標での中心点をワールド座標に変換
+        // viewOffsetとscaleを考慮して、現在の表示状態でのワールド座標を取得
+        double worldX = (screenPoint.getX() - viewOffset.x) / scale;
+        double worldY = (screenPoint.getY() - viewOffset.y) / scale;
+
+        // 新しいスケールを計算し、範囲内に収める
+        double newScale = scale * zoomFactor;
+        if (newScale < MIN_SCALE) {
+            newScale = MIN_SCALE;
+        } else if (newScale > MAX_SCALE) {
+            newScale = MAX_SCALE;
+        }
+
+        // スケールが変更されない場合は何もしない
+        if (newScale == scale) {
+            return;
+        }
+
+        // 新しいスケールを設定
+        scale = newScale;
+
+        // 新しいスケールとワールド座標のズーム中心点から、新しいオフセットを計算する
+        // (screenPoint.x - newViewOffsetX) / newScale = worldX
+        // screenPoint.x - newViewOffsetX = worldX * newScale
+        // newViewOffsetX = screenPoint.x - (worldX * newScale)
+        viewOffset.x = screenPoint.getX() - (worldX * newScale);
+        viewOffset.y = screenPoint.getY() - (worldY * newScale);
+
+        repaint();
+    }
+
+
+    /**
+     * 現在のスケール値を取得
+     * @return スケール値
+     */
+    public double getScale() {
+        return scale;
+    }
+
+    /**
+     * スケール値を設定
+     * @param newScale 新しいスケール
+     */
+    public void setScale(double newScale) {
+        if (newScale >= MIN_SCALE && newScale <= MAX_SCALE) {
+            scale = newScale;
+            repaint();
+        }
+    }
+
+    /**
+     * スケール値をパーセント表記で取得
+     * @return 例: "100.0%"
+     */
+    public String getScalePercent() {
+        return percentFormat.format(scale);
+    }
+
+    /**
+     * 保存ファイル選択ダイアログを表示する。
+     * .spiro拡張子のファイルフィルタを設定し、拡張子が付与されていない場合は自動で追加する。
+     * @return 選択されたファイル、またはキャンセルされた場合はnull
+     */
+    public File chooseSaveFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("Spiro Files (*." + SPIRO_EXTENSION + ")", SPIRO_EXTENSION);
+        fileChooser.setFileFilter(filter); // ファイルフィルタを設定
+        fileChooser.addChoosableFileFilter(filter); // ChoosableFileFilterとして追加
+
+        int result = fileChooser.showSaveDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File file = fileChooser.getSelectedFile();
+            // 選択されたファイル名に拡張子がない場合、.spiroを付与
+            if (!file.getName().toLowerCase().endsWith("." + SPIRO_EXTENSION)) {
+                file = new File(file.getAbsolutePath() + "." + SPIRO_EXTENSION);
+            }
+            return file;
+        }
+        return null;
+    }
+
+    /**
+     * 読込ファイル選択ダイアログを表示する。
+     * .spiro拡張子のファイルフィルタを設定する。
+     * @return 選択されたファイル、またはキャンセルされた場合はnull
+     */
+    public File chooseLoadFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("Spiro Files (*." + SPIRO_EXTENSION + ")", SPIRO_EXTENSION);
+        fileChooser.setFileFilter(filter); // ファイルフィルタを設定
+        fileChooser.addChoosableFileFilter(filter); // ChoosableFileFilterとして追加
+
+        int result = fileChooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            return fileChooser.getSelectedFile();
+        }
+        return null;
+    }
+
+    /**
+     * スクリーン座標をワールド座標に変換
      * @param screenPoint スクリーン座標
      * @return ワールド座標
      */
     public Point2D.Double screenToWorld(Point screenPoint) {
-        double worldX = (screenPoint.x - viewOffset.x) / scale;
-        double worldY = (screenPoint.y - viewOffset.y) / scale;
+        double worldX = (screenPoint.getX() - viewOffset.x) / scale;
+        double worldY = (screenPoint.getY() - viewOffset.y) / scale;
         return new Point2D.Double(worldX, worldY);
     }
 
     /**
-     * ワールド座標をスクリーン座標に変換する。
-     * @param worldPoint ワールド座標
-     * @return スクリーン座標
+     * スパーギア定義モード設定
+     * @param defining trueで定義中
      */
-    public Point worldToScreen(Point2D.Double worldPoint) {
-        int screenX = (int) (worldPoint.x * scale + viewOffset.x);
-        int screenY = (int) (worldPoint.y * scale + viewOffset.y);
-        return new Point(screenX, screenY);
-    }
-
-    /**
-     * 指定された点を中心にビューをズームする。
-     * @param centerPoint ズームの中心となるスクリーン座標
-     * @param zoomFactor ズーム倍率
-     */
-    public void zoomAt(Point centerPoint, double zoomFactor) {
-        // ズーム範囲を制限
-        double newScale = scale * zoomFactor;
-        if (newScale < MIN_SCALE) newScale = MIN_SCALE;
-        if (newScale > MAX_SCALE) newScale = MAX_SCALE;
-
-        // ズームの中心がワールド座標のどこにあるかを計算
-        Point2D.Double worldCenter = screenToWorld(centerPoint);
-
-        // 新しいオフセットを計算
-        // (centerPoint.x - newOffsetX) / newScale = worldCenter.x
-        // newOffsetX = centerPoint.x - worldCenter.x * newScale
-        viewOffset.x = centerPoint.x - worldCenter.x * newScale;
-        viewOffset.y = centerPoint.y - worldCenter.y * newScale;
-
-        scale = newScale;
+    public void setDefiningSpurGear(boolean defining) {
+        this.isDefiningSpurGear = defining;
+        if (!defining) {
+            clearSpurGearDefinition();
+        }
         repaint();
     }
 
     /**
-     * 保存成功メッセージを表示する。
-     * @param message 表示するメッセージ
+     * スパーギア中心（スクリーン座標）設定
+     * @param p スクリーン座標
+     */
+    public void setSpurGearCenterScreen(Point p) {
+        this.spurGearCenterScreen = p;
+        this.currentDragPointScreen = p;
+        repaint();
+    }
+
+    /**
+     * スパーギアドラッグ点（スクリーン座標）設定
+     * @param p スクリーン座標
+     */
+    public void setCurrentDragPointScreen(Point p) {
+        this.currentDragPointScreen = p;
+        repaint();
+    }
+
+    /**
+     * スパーギア定義情報クリア
+     */
+    public void clearSpurGearDefinition() {
+        this.isDefiningSpurGear = false;
+        this.spurGearCenterScreen = null;
+        this.currentDragPointScreen = null;
+        repaint();
+    }
+
+    /**
+     * ピニオンギア定義モード設定
+     * @param defining trueで定義中
+     */
+    public void setDefiningPinionGear(boolean defining) {
+        this.isDefiningPinionGear = defining;
+        if (!defining) {
+            clearPinionGearDefinition();
+        }
+        repaint();
+    }
+
+    /**
+     * ピニオンギア中心（スクリーン座標）設定
+     * @param p スクリーン座標
+     */
+    public void setPinionGearCenterScreen(Point p) {
+        this.pinionGearCenterScreen = p;
+        this.currentDragPointScreenForPinion = p;
+        repaint();
+    }
+
+    /**
+     * ピニオンギアドラッグ点（スクリーン座標）設定
+     * @param p スクリーン座標
+     */
+    public void setCurrentDragPointScreenForPinion(Point p) {
+        this.currentDragPointScreenForPinion = p;
+        repaint();
+    }
+
+    /**
+     * ピニオンギア定義情報クリア
+     */
+    public void clearPinionGearDefinition() {
+        this.isDefiningPinionGear = false;
+        this.pinionGearCenterScreen = null;
+        this.currentDragPointScreenForPinion = null;
+        repaint();
+    }
+
+    /**
+     * ビューオフセット取得
+     * @return オフセット
+     */
+    public Point2D.Double getViewOffset() {
+        return viewOffset;
+    }
+
+    /**
+     * ビューオフセット設定
+     * @param offset 新しいオフセット
+     */
+    public void setViewOffset(Point2D.Double offset) {
+        this.viewOffset = offset;
+        repaint();
+    }
+
+    /**
+     * 軌跡データ・ペン情報をViewにセット
+     * (ModelからPathSegmentのリストを受け取るように変更)
+     * @param loadedPathSegments 軌跡のデータ (PathSegmentのリスト)
+     * @param penColor  ペンの色 (現在のペンの色を反映するが、主に過去の軌跡には使用されない)
+     * @param penSize   ペンのサイズ
+     */
+    public void setLocusData(List<PathSegment> loadedPathSegments, Color penColor, double penSize) { // 引数を変更
+        this.loadedPathSegments = loadedPathSegments; // loadedLocusData から変更
+        this.loadedPenColor = penColor;
+        this.loadedPenSize = penSize;
+        repaint();
+    }
+
+    /**
+     * ロード済み軌跡データをクリア
+     */
+    public void clearLoadedLocusData() {
+        this.loadedPathSegments = null; // loadedLocusData から変更
+        this.loadedPenColor = null;
+        this.loadedPenSize = -1.0;
+        repaint();
+    }
+
+    /**
+     * 保存成功メッセージを表示
+     * @param message メッセージ
      */
     public void displaySaveSuccessMessage(String message) {
         this.saveMessage = message;
-        messageTimer.restart(); // タイマーをリスタート
+        repaint();
+        if (messageTimer.isRunning()) {
+            messageTimer.restart();
+        } else {
+            messageTimer.start();
+        }
+    }
+
+    /**
+     * メニューを表示
+     * @param x X座標
+     * @param y Y座標
+     */
+    public void showMenu(int x, int y) {
+        MenuDisplay.show(this, x, y);
+    }
+
+    /**
+     * 画面パン（移動）
+     * @param dx X方向移動量
+     * @param dy Y方向移動量
+     */
+    public void pan(int dx, int dy) {
+        viewOffset.x += dx;
+        viewOffset.y += dy;
         repaint();
     }
 
     /**
-     * マウスカーソルを更新する。
-     * @param mouseScreenPoint マウスのスクリーン座標
+     * マウス位置に応じてカーソル形状を更新する
+     * @param mousePoint スクリーン座標でのマウス位置
      */
-    public void updateCursor(Point mouseScreenPoint) {
-        Point2D.Double world = screenToWorld(mouseScreenPoint);
-        Point2D.Double spurCenter = model.getSpurGearPosition();
+    public void updateCursor(Point mousePoint) {
+        Point2D world = screenToWorld(mousePoint);
+
+        // スパーギア中心
+        Point2D spurCenter = model.getSpurGearPosition();
         double spurRadius = model.getSpurGearRadius();
-        Point2D.Double pinionCenter = model.getPinionGearPosition();
+        // ピニオンギア中心
+        Point2D pinionCenter = model.getPinionGearPosition();
         double pinionRadius = model.getPinionGearRadius();
 
-        // どの要素の上にマウスがあるかに応じてカーソルを変更
         if (spurCenter != null && world.distance(spurCenter) < 10 / scale) {
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
         } else if (spurCenter != null && Math.abs(world.distance(spurCenter) - spurRadius) < 10 / scale) {
@@ -464,75 +785,6 @@ public class View extends JPanel {
     public void showPenTip() {
         showPenTip = true;
         repaint();
-    }
-
-    /**
-     * ロードされたデータをViewに設定する
-     * @param loadedSegments ロードされたPathSegmentのリスト
-     * @param penColor ロードされたペンの色
-     * @param penSize ロードされたペンのサイズ
-     */
-    public void setLocusData(List<PathSegment> loadedSegments, Color penColor, double penSize) {
-        this.loadedPathSegments = loadedSegments;
-        this.loadedPenColor = penColor;
-        this.loadedPenSize = penSize;
-        repaint(); // データが更新されたので再描画
-    }
-
-    /**
-     * スパーギアとピニオンギアの半径が変更されたことをViewに通知する。
-     * これは現在使用されていませんが、将来的に必要になる可能性を考慮しています。
-     * @param newRadius 新しい半径
-     */
-    public void changeSpurAndPinionRadius(double newRadius) {
-        // 現在はこのメソッドでは特に描画関連の処理は行いませんが、
-        // 必要に応じてここに描画ロジックを追加できます。
-        repaint();
-    }
-
-    /**
-     * ビューをパンする
-     * @param dx X方向の移動量
-     * @param dy Y方向の移動量
-     */
-    public void pan(int dx, int dy) {
-        viewOffset.x += dx;
-        viewOffset.y += dy;
-        repaint();
-    }
-
-    /**
-     * 現在のスケールを取得
-     * @return スケール
-     */
-    public double getScale() {
-        return scale;
-    }
-
-    /**
-     * ファイル保存ダイアログを開く
-     * @return 選択されたファイル
-     */
-    public File chooseSaveFile() {
-        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-            File selectedFile = fileChooser.getSelectedFile();
-            if (!selectedFile.getName().toLowerCase().endsWith("." + SPIRO_EXTENSION)) {
-                selectedFile = new File(selectedFile.getAbsolutePath() + "." + SPIRO_EXTENSION);
-            }
-            return selectedFile;
-        }
-        return null;
-    }
-
-    /**
-     * ファイル読み込みダイアログを開く
-     * @return 選択されたファイル
-     */
-    public File chooseLoadFile() {
-        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            return fileChooser.getSelectedFile();
-        }
-        return null;
     }
 
     // --- テスト用のゲッターメソッド ---
@@ -570,66 +822,10 @@ public class View extends JPanel {
     }
 
     /**
-     * ピニオンギア中心（スクリーン座標）を取得
-     * @return ピニオンギア中心のスクリーン座標
+     * ペン先表示フラグの状態を取得
+     * @return ペン先が表示されていればtrue
      */
-    public Point getPinionGearCenterScreen() {
-        return pinionGearCenterScreen;
-    }
-
-    /**
-     * ピニオンギアドラッグ点（スクリーン座標）を取得
-     * @return ピニオンギアドラッグ点のスクリーン座標
-     */
-    public Point getCurrentDragPointScreenForPinion() {
-        return currentDragPointScreenForPinion;
-    }
-
-    /**
-     * スパーギア定義中フラグを設定
-     * @param definingSpurGear trueならスパーギア定義中
-     */
-    public void setDefiningSpurGear(boolean definingSpurGear) {
-        isDefiningSpurGear = definingSpurGear;
-    }
-
-    /**
-     * スパーギア中心（スクリーン座標）を設定
-     * @param spurGearCenterScreen スパーギア中心のスクリーン座標
-     */
-    public void setSpurGearCenterScreen(Point spurGearCenterScreen) {
-        this.spurGearCenterScreen = spurGearCenterScreen;
-    }
-
-    /**
-     * スパーギアドラッグ点（スクリーン座標）を設定
-     * @param currentDragPointScreen スパーギアドラッグ点のスクリーン座標
-     */
-    public void setCurrentDragPointScreen(Point currentDragPointScreen) {
-        this.currentDragPointScreen = currentDragPointScreen;
-    }
-
-    /**
-     * ピニオンギア定義中フラグを設定
-     * @param definingPinionGear trueならピニオンギア定義中
-     */
-    public void setDefiningPinionGear(boolean definingPinionGear) {
-        this.isDefiningPinionGear = definingPinionGear;
-    }
-
-    /**
-     * ピニオンギア中心（スクリーン座標）を設定
-     * @param pinionGearCenterScreen ピニオンギア中心のスクリーン座標
-     */
-    public void setPinionGearCenterScreen(Point pinionGearCenterScreen) {
-        this.pinionGearCenterScreen = pinionGearCenterScreen;
-    }
-
-    /**
-     * ピニオンギアドラッグ点（スクリーン座標）を設定
-     * @param currentDragPointScreenForPinion ピニオンギアドラッグ点のスクリーン座標
-     */
-    public void setCurrentDragPointScreenForPinion(Point currentDragPointScreenForPinion) {
-        this.currentDragPointScreenForPinion = currentDragPointScreenForPinion;
+    public boolean isShowPenTip() {
+        return showPenTip;
     }
 }

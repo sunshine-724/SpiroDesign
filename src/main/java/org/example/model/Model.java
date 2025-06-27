@@ -4,7 +4,7 @@ import java.awt.Color;
 import java.awt.Point;
 import java.awt.geom.*;
 import java.io.File;
-import java.io.IOException;
+import java.io.IOException; // IOExceptionをインポート
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,14 +14,14 @@ import javax.swing.Timer;
 import org.example.spiroIO.SpiroIO;
 import org.example.view.View;
 import org.example.lib.Pair;
-import org.example.lib.PathSegment;
+import org.example.lib.PathSegment; // 追加: PathSegmentをインポート
 
 /*
  * Modelクラスは、Spiro.appのデータを管理するクラス。
  */
 
-public class Model implements Serializable {
-    private static final long serialVersionUID = 1L;
+public class Model implements Serializable { // Serializableを実装
+    private static final long serialVersionUID = 1L; // serialVersionUIDを追加
 
     /**
      * スパーギアとピニオンギアのインスタンスを保持する。
@@ -36,23 +36,23 @@ public class Model implements Serializable {
      * ファイルからスパーギア、ピニオンギアのデータを読み込んだり、保存したりする。
      * SpiroIOはModelの一部ではないため、シリアライズしない
      */
-    private transient SpiroIO spiroIO;
+    private transient SpiroIO spiroIO; // transientとしてマーク
 
     /**
      * Viewのリストを保持する。
      * ViewはGUIコンポーネントであり、シリアライズすべきではないためtransientとする。
      */
-    private transient List<View> views = new ArrayList<>();
+    private transient List<View> views = new ArrayList<>(); // transientとしてマーク
 
     /**
      * タイマーは一定の間隔でModelのデータを更新し、Viewに通知し、スピロデザインの描画をアニメーションするために使用される。
      * TimerはGUI関連のオブジェクトであり、シリアライズすべきではないためtransientとする。
      */
-    private transient Timer timer;
+    private transient Timer timer; // transientとしてマーク
 
     // 軌跡をPathSegmentのリストで管理するように変更
-    private List<PathSegment> pathSegments;
-    private transient PathSegment currentPathSegment;
+    private List<PathSegment> pathSegments; // locus から変更
+    private transient PathSegment currentPathSegment; // 現在描画中のセグメント (transientとしてマーク)
 
     /** 描画開始時刻(ミリ秒) */
     private long startTime;
@@ -65,13 +65,6 @@ public class Model implements Serializable {
      * 60 FPSで描画するため、1フレームあたりの時間は1000 / 60ミリ秒
      */
     private static final int FRAME_PER_MILLISECOND = 1000 / 60; // 60 FPS
-
-    /**
-     * 描画のために最後に計算された絶対時間（ミリ秒）。
-     * 各フレームで中間点を生成するために使用する。
-     */
-    private transient long lastCalculatedAbsoluteTime;
-
 
     /**
      * Modelクラスのコンストラクタ。
@@ -100,7 +93,6 @@ public class Model implements Serializable {
                 view.repaint();
             }
         });
-        lastCalculatedAbsoluteTime = 0; // 初期化
     }
 
     /**
@@ -132,7 +124,6 @@ public class Model implements Serializable {
         stop(); // ロード後はアニメーションを停止状態にする
         pauseTime = 0; // ロード後は一時停止時間をリセット
         startTime = System.currentTimeMillis(); // 開始時刻もリセットして、再開時に正しく動作するようにする
-        lastCalculatedAbsoluteTime = 0; // デシリアライズ後もリセット
     }
 
 
@@ -145,8 +136,6 @@ public class Model implements Serializable {
         if (!timer.isRunning()) { // 既に実行中でない場合のみ開始
             timer.start();
             startTime = System.currentTimeMillis() - pauseTime;
-            // タイマー開始時または再開時にlastCalculatedAbsoluteTimeを初期化または設定
-            lastCalculatedAbsoluteTime = System.currentTimeMillis() - startTime;
         }
     }
 
@@ -168,41 +157,20 @@ public class Model implements Serializable {
      * このメソッドは、ピニオンギアの位置とペンの位置を更新し、描画する点を軌跡の点としてリストに追加する。
      */
     private void updateData() {
-        long currentAbsoluteDrawingTime = System.currentTimeMillis() - startTime;
+        long currentTime = System.currentTimeMillis() - startTime;
 
-        // 初回描画時またはリセット/ロード後の初回更新時
-        if (lastCalculatedAbsoluteTime == 0 || currentAbsoluteDrawingTime <= lastCalculatedAbsoluteTime) {
-            pinionGear.move(currentAbsoluteDrawingTime, spurGear.getSpurRadius(), spurGear.getSpurPosition());
-            Point2D.Double penPosition = pinionGear.getPen().getPosition();
-            currentPathSegment.addPoint(penPosition); // 現在のセグメントに点を追加
-        } else {
-            // 前回の計算時刻から現在の時刻までの間に中間点を生成
-            // 描画が荒い原因はここです。フレームレートが固定されているのに、そのフレーム間でギアが大きく動くと
-            // 描画される点の密度が低くなり、線がカクカクしてしまいます。
-            // そこで、1フレームあたりの時間差をさらに細かく分割し、中間点を補間することで滑らかな軌跡を描画します。
-            double timeDelta = (double)(currentAbsoluteDrawingTime - lastCalculatedAbsoluteTime);
-            // 速度に応じて中間点の数を調整することも可能ですが、ここでは固定で十分な滑らかさを目指します。
-            int numSubSteps = 10; // 1フレームあたりに計算する中間点の数 (値を増やすほど滑らかになるが、計算量が増える)
-            double subStepTimeIncrement = timeDelta / numSubSteps;
+        // ピニオンギアの位置とペンの位置を更新
+        pinionGear.move(currentTime, spurGear.getSpurRadius(), spurGear.getSpurPosition());
 
-            for (int i = 1; i <= numSubSteps; i++) {
-                long intermediateTime = lastCalculatedAbsoluteTime + (long)(i * subStepTimeIncrement);
+        // ペンの位置を取得
+        Point2D.Double penPosition = pinionGear.getPen().getPosition();
 
-                // 現在のフレームの時間を超えないようにクランプ
-                if (intermediateTime > currentAbsoluteDrawingTime) {
-                    intermediateTime = currentAbsoluteDrawingTime;
-                }
-
-                pinionGear.move(intermediateTime, spurGear.getSpurRadius(), spurGear.getSpurPosition());
-                Point2D.Double penPosition = pinionGear.getPen().getPosition();
-                currentPathSegment.addPoint(penPosition); // 現在のセグメントに点を追加
-
-                if (intermediateTime == currentAbsoluteDrawingTime) {
-                    break; // このフレームの終点に到達
-                }
-            }
+        // currentPathSegmentがnullの場合は初期化（通常はresetGearsやreadObjectで初期化される）
+        if (currentPathSegment == null) {
+            currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
+            pathSegments.add(currentPathSegment);
         }
-        lastCalculatedAbsoluteTime = currentAbsoluteDrawingTime; // 次のフレームのために時刻を更新
+        currentPathSegment.addPoint(penPosition);
     }
 
     /**
@@ -212,10 +180,9 @@ public class Model implements Serializable {
      * @param penColor  ペンの色
      * @param penSize   ペンのサイズ
      */
-    private void notifyViewsLoading(List<PathSegment> loadedPathSegments, Color penColor, double penSize) {
+    private void notifyViewsLoading(List<PathSegment> loadedPathSegments, Color penColor, double penSize) { // 引数を変更
         for (View view : views) {
-            // ViewのsetLocusDataメソッドを呼び出す
-            view.setLocusData(loadedPathSegments, penColor, penSize);
+            view.setLocusData(loadedPathSegments, penColor, penSize); // ViewのsetLocusDataも変更が必要
         }
     }
 
@@ -247,7 +214,7 @@ public class Model implements Serializable {
      * 軌跡の取得メソッドを変更
      * @return PathSegmentのリストと現在のPathSegmentを結合したリスト
      */
-    public List<PathSegment> getPathSegments() {
+    public List<PathSegment> getPathSegments() { // getLocus() から変更
         // 現在描画中のセグメントも常に含めるようにする
         List<PathSegment> allSegments = new ArrayList<>(pathSegments);
         // currentPathSegmentが空でなければ追加 (描画中に点が追加されるため、この時点で追加する)
@@ -357,22 +324,6 @@ public class Model implements Serializable {
     }
 
     /**
-     * スパーギアの色を取得する。
-     * @return スパーギアの色
-     */
-    public Color getSpurGearColor() {
-        return spurGear.color;
-    }
-
-    /**
-     * ピニオンギアの色を取得する。
-     * @return ピニオンギアの色
-     */
-    public Color getPinionGearColor() {
-        return pinionGear.color;
-    }
-
-    /**
      * スパーギアとピニオンギアを指定された座標に移動する。
      * このメソッドは、スパーギアとピニオンギアの位置を指定された座標に移動させる。
      * ペンの位置もピニオンギアが移動すると同時に更新される。
@@ -387,7 +338,6 @@ public class Model implements Serializable {
         pinionGear.setPosition(new Point2D.Double(pinionGear.getPinionPosition().x + dx,
                 pinionGear.getPinionPosition().y + dy));
     }
-
 
     /**
      * ピニオンギアのペンの位置を指定された座標に移動する。
@@ -567,7 +517,7 @@ public class Model implements Serializable {
                 // ロードされたデータで現在のモデルの状態を更新
                 this.spurGear = loadedModel.getSpurGear();
                 this.pinionGear = loadedModel.getPinionGear();
-                this.pathSegments = loadedModel.getPathSegments();
+                this.pathSegments = loadedModel.getPathSegments(); // locus から変更
 
                 // ロードされたペンの状態を現在のピニオンギアのペンに反映させる
                 this.pinionGear.getPen().setPosition(loadedPen.getPosition());
@@ -578,7 +528,7 @@ public class Model implements Serializable {
                 this.startTime = System.currentTimeMillis();
                 stop();
 
-                // ロードされたパスセグメントをViewに通知する
+                // ロードされたパスセグメントをViewに通知する (locusDataから変更)
                 notifyViewsLoading(this.pathSegments, this.pinionGear.getPen().getColor(), this.pinionGear.getPen().getPenSize());
 
                 // ロード後にcurrentPathSegmentを適切に設定する
@@ -597,7 +547,7 @@ public class Model implements Serializable {
                     currentPathSegment = new PathSegment(this.pinionGear.getPen().getColor());
                     pathSegments = new ArrayList<>(); // pathSegmentsも初期化
                 }
-                lastCalculatedAbsoluteTime = 0; // ロード時にもリセット
+
                 return true;
             } else {
                 System.err.println("Failed to load data: No data found in the file.");
@@ -655,12 +605,11 @@ public class Model implements Serializable {
         this.pinionGear.getPen().changeColor(Pen.DEFAULT_COLOR);
 
         // 軌跡もクリアし、新しいセグメントを開始
-        this.pathSegments = new ArrayList<>();
-        this.currentPathSegment = new PathSegment(this.pinionGear.getPen().getColor());
+        this.pathSegments = new ArrayList<>(); // locus から変更
+        this.currentPathSegment = new PathSegment(this.pinionGear.getPen().getColor()); // 新しいセグメントを開始
 
         this.pauseTime = 0; // 一時停止時間もリセット
         this.startTime = System.currentTimeMillis(); // 開始時間もリセット
-        this.lastCalculatedAbsoluteTime = 0; // リセット時にも初期化
     }
 
     // スパーギアとピニオンギアのゲッターを追加 (SpiroIOがModelをロードする際に必要になる可能性)
@@ -670,54 +619,5 @@ public class Model implements Serializable {
 
     public PinionGear getPinionGear() {
         return pinionGear;
-    }
-
-    /**
-     * スパーギアを新しい位置に移動する。
-     * @param newPosition 新しいワールド座標
-     */
-    public void moveSpurGear(Point2D newPosition) {
-        double dx = newPosition.getX() - spurGear.getSpurPosition().getX();
-        double dy = newPosition.getY() - spurGear.getSpurPosition().getY();
-        spurGear.setPosition(new Point2D.Double(newPosition.getX(), newPosition.getY()));
-        pinionGear.setPosition(new Point2D.Double(pinionGear.getPinionPosition().getX() + dx, pinionGear.getPinionPosition().getY() + dy));
-    }
-
-    /**
-     * スパーギアの半径を変更する。
-     * @param newPoint 新しい半径を計算するためのワールド座標
-     */
-    public void changeSpurGearRadius(Point2D newPoint) {
-        double newRadius = newPoint.distance(spurGear.getSpurPosition());
-        spurGear.changeRadius(newRadius);
-    }
-
-    /**
-     * ピニオンギアを新しい位置に移動する。
-     * @param newPosition 新しいワールド座標
-     */
-    public void movePinionGear(Point2D newPosition) {
-        pinionGear.setPosition(new Point2D.Double(newPosition.getX(), newPosition.getY()));
-    }
-
-    /**
-     * ビューをパン（移動）する。
-     * @param oldScreenPoint パン開始時のスクリーン座標
-     * @param newScreenPoint パン終了時のスクリーン座標
-     */
-    public void panView(Point oldScreenPoint, Point newScreenPoint) {
-        double dx = newScreenPoint.getX() - oldScreenPoint.getX();
-        double dy = newScreenPoint.getY() - oldScreenPoint.getY();
-        for (View view : views) {
-            view.pan((int) dx, (int) dy);
-        }
-    }
-
-    /**
-     * ピニオンギアの速度を変更する。
-     * @param speed 新しい速度
-     */
-    public void changePinionGearSpeed(double speed) {
-        pinionGear.changeSpeed(speed);
     }
 }

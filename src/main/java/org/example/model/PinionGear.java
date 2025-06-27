@@ -73,7 +73,7 @@ public class PinionGear extends SpiroGear implements Serializable {
      */
     public PinionGear() {
         super(DEFAULT_POSITION, DEFAULT_RADIUS, DEFAULT_COLOR);
-        this.speed = 0.5; // デフォルトの速度を0.5に設定
+        this.speed = 1.0; // 変更: デフォルトの速度を1/10に設定 (10.0 から 1.0 へ)
         this.theta = 0.0; // 初期角度を設定
         this.alpha = DEFAULT_PEN_OFFSET_ANGLE; // ペン先のオフセット角度を設定
 
