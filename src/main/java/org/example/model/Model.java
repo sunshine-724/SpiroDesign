@@ -132,8 +132,34 @@ public class Model implements Serializable { // Serializableを実装
      * タイマーを開始または再開し、描画開始時刻を記録する。
      */
     public void start() {
+        // ペンの位置がピニオンギアの内側にある場合のみ、ピニオンギアの中心・theta・alphaを初期化
+        Point2D.Double penPos = pinionGear.getPen().getPosition();
+        Point2D.Double spurCenter = spurGear.getSpurPosition();
+        double spurRadius = spurGear.getSpurRadius();
+        double pinionRadius = pinionGear.getPinionRadius();
+
+        if (penPos != null && spurCenter != null) {
+            double dx = penPos.x - spurCenter.x;
+            double dy = penPos.y - spurCenter.y;
+            double dist = Math.hypot(dx, dy);
+            double expectedDist = spurRadius - pinionRadius;
+            // ピニオンギアの内側（スパーギア中心からペンまでの距離 < スパーギア半径）でのみ初期化
+            if (dist < spurRadius) {
+                if (dist > 1e-6) {
+                    double ratio = expectedDist / dist;
+                    double pinionCenterX = spurCenter.x + dx * ratio;
+                    double pinionCenterY = spurCenter.y + dy * ratio;
+                    pinionGear.setPosition(new Point2D.Double(pinionCenterX, pinionCenterY));
+                    double theta = -Math.atan2(pinionCenterY - spurCenter.y, pinionCenterX - spurCenter.x);
+                    pinionGear.theta = theta;
+                    double alpha = Math.atan2(penPos.y - pinionCenterY, penPos.x - pinionCenterX);
+                    pinionGear.alpha = alpha;
+                }
+            }
+        }
+
         System.out.println("start");
-        if (!timer.isRunning()) { // 既に実行中でない場合のみ開始
+        if (!timer.isRunning()) {
             timer.start();
             startTime = System.currentTimeMillis() - pauseTime;
         }
