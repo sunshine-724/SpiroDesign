@@ -304,16 +304,14 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
                 break;
             case "Small":
                 model.getPinionGear().getPen().setPenSize(1.0);
-                // ペンサイズ変更後も色セグメントを適切に処理する必要がある場合、
-                // model.changePenColor(model.getPenColor()); のように呼び出す
                 view.repaint();
                 break;
             case "Medium":
-                model.getPinionGear().getPen().setPenSize(3.0);
+                model.getPinionGear().getPen().setPenSize(2.0); // 小さめに
                 view.repaint();
                 break;
             case "Large":
-                model.getPinionGear().getPen().setPenSize(5.0);
+                model.getPinionGear().getPen().setPenSize(3.0); // 小さめに
                 view.repaint();
                 break;
             default:

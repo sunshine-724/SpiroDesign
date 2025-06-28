@@ -30,7 +30,7 @@ public class Pen implements Serializable { // Serializableを実装
     /**
      * デフォルトのペンサイズ。
      */
-    public static final double DEFAULT_PEN_SIZE = 5.0;
+    public static final double DEFAULT_PEN_SIZE = 2.0; // medium相当のサイズに変更
 
     /**
      * デフォルトのペンの色。
