@@ -108,7 +108,8 @@ public class Model implements Serializable { // Serializableを実装
             // ロードされたセグメントの最後の点を引き継ぐ
             PathSegment lastLoadedSegment = pathSegments.get(pathSegments.size() - 1);
             if (!lastLoadedSegment.getPoints().isEmpty()) {
-                currentPathSegment = new PathSegment(lastLoadedSegment.getColor(), new ArrayList<>(lastLoadedSegment.getPoints()));
+                currentPathSegment = new PathSegment(lastLoadedSegment.getColor(),
+                        new ArrayList<>(lastLoadedSegment.getPoints()));
             } else {
                 currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
             }
@@ -126,52 +127,61 @@ public class Model implements Serializable { // Serializableを実装
         startTime = System.currentTimeMillis(); // 開始時刻もリセットして、再開時に正しく動作するようにする
     }
 
-
     /**
      * スピロデザインのの描画を開始する。
      * タイマーを開始または再開し、描画開始時刻を記録する。
      */
     public void start() {
-        // ペンの位置がピニオンギアの内側にある場合のみ、ピニオンギアの中心・theta・alphaを初期化
-        Point2D.Double penPos = pinionGear.getPen().getPosition();
-        Point2D.Double spurCenter = spurGear.getSpurPosition();
-        double spurRadius = spurGear.getSpurRadius();
-        double pinionRadius = pinionGear.getPinionRadius();
-
-        if (penPos != null && spurCenter != null) {
-            double dx = penPos.x - spurCenter.x;
-            double dy = penPos.y - spurCenter.y;
-            double dist = Math.hypot(dx, dy);
-            double expectedDist = spurRadius - pinionRadius;
-            if (dist < spurRadius) {
-                if (dist > 1e-6) {
-                    double ratio = expectedDist / dist;
-                    double pinionCenterX = spurCenter.x + dx * ratio;
-                    double pinionCenterY = spurCenter.y + dy * ratio;
-                    pinionGear.setPosition(new Point2D.Double(pinionCenterX, pinionCenterY));
-                    double theta = -Math.atan2(pinionCenterY - spurCenter.y, pinionCenterX - spurCenter.x);
-                    pinionGear.theta = theta;
-                    double alpha = Math.atan2(penPos.y - pinionCenterY, penPos.x - pinionCenterX);
-                    pinionGear.alpha = alpha;
-                }
-            }
-        }
-
-        // --- 安定化のための追加処理 ---
-        // pathSegmentsやcurrentPathSegmentがnullの場合は初期化
+        // --- 0.1秒ディレイ前にピニオンギアの初期化処理を行わないように修正 ---
         if (pathSegments == null) {
             pathSegments = new ArrayList<>();
         }
         if (currentPathSegment == null) {
             currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
         }
-        // タイマーが既に動いている場合は何もしない
-        if (!timer.isRunning()) {
-            timer.start();
-            // pauseTimeが0でなければ一時停止からの再開、0なら新規開始
-            startTime = System.currentTimeMillis() - pauseTime;
-            pauseTime = 0;
+        if (timer.isRunning()) {
+            return; // 多重実行防止
         }
+        // --- 0.1秒遅延してからピニオンギアの初期化とタイマー開始 ---
+        new javax.swing.Timer(100, e -> {
+            // ピニオンギアの初期化処理はここで行う
+            Point2D.Double penPos = pinionGear.getPen().getPosition();
+            Point2D.Double spurCenter = spurGear.getSpurPosition();
+            double spurRadius = spurGear.getSpurRadius();
+            double pinionRadius = pinionGear.getPinionRadius();
+
+            if (penPos != null && spurCenter != null) {
+                double dx = penPos.x - spurCenter.x;
+                double dy = penPos.y - spurCenter.y;
+                double dist = Math.hypot(dx, dy);
+                double expectedDist = spurRadius - pinionRadius;
+                // --- 数値誤差対策: NaN, Infinity, 負値, 極端な値をガード ---
+                if (!(Double.isNaN(dist) || Double.isInfinite(dist) || dist < 1e-8 || dist > 1e6)) {
+                    if (dist < spurRadius && dist > 1e-6) {
+                        double ratio = expectedDist / dist;
+                        if (!(Double.isNaN(ratio) || Double.isInfinite(ratio) || Math.abs(ratio) > 1e6)) {
+                          double pinionCenterX = spurCenter.x + dx * ratio;
+                          double pinionCenterY = spurCenter.y + dy * ratio;
+                          if (!(Double.isNaN(pinionCenterX) || Double.isNaN(pinionCenterY) ||
+                                Double.isInfinite(pinionCenterX) || Double.isInfinite(pinionCenterY))) {
+                            pinionGear.setPosition(new Point2D.Double(pinionCenterX, pinionCenterY));
+                            double theta = -Math.atan2(pinionCenterY - spurCenter.y, pinionCenterX - spurCenter.x);
+                            pinionGear.theta = theta;
+                            double alpha = Math.atan2(penPos.y - pinionCenterY, penPos.x - pinionCenterX);
+                            pinionGear.alpha = alpha;
+                          }
+                        }
+                    }
+                }
+            }
+
+            if (!timer.isRunning()) {
+                timer.start();
+                startTime = System.currentTimeMillis() - pauseTime;
+                pauseTime = 0;
+            }
+            ((javax.swing.Timer)e.getSource()).stop();
+        }).start();
     }
 
     /**
@@ -181,9 +191,42 @@ public class Model implements Serializable { // Serializableを実装
      */
     public void stop() {
         System.out.println("stop");
-        if (timer.isRunning()) { // 実行中の場合のみ停止
-            timer.stop();
-            pauseTime = System.currentTimeMillis() - startTime;
+        if (!timer.isRunning()) {
+            return; // 多重実行防止
+        }
+        timer.stop();
+        this.pauseTime = 0;
+        this.startTime = System.currentTimeMillis();
+        resetSpirographTime();
+    }
+
+    /**
+     * ピニオンギア中心ドラッグ後やstop後に呼び出し、thetaOffsetを現在の中心角度にセットする
+     */
+    public void resetSpirographTime() {
+        // 経過時間リセット
+        this.pauseTime = 0;
+        this.startTime = System.currentTimeMillis();
+        // thetaOffsetを現在の中心角度にセット
+        Point2D.Double spurCenter = spurGear.getSpurPosition();
+        Point2D.Double pinionCenter = pinionGear.getPinionPosition();
+        if (spurCenter != null && pinionCenter != null) {
+            double thetaOffset = -Math.atan2(pinionCenter.y - spurCenter.y, pinionCenter.x - spurCenter.x);
+            pinionGear.setThetaOffset(thetaOffset);
+        }
+    }
+
+    /**
+     * ペン色を変えずに新しいセグメントを開始する（ピニオンギア中心移動時など用）
+     */
+    public void startNewPathSegment() {
+        if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
+            pathSegments.add(currentPathSegment);
+        }
+        currentPathSegment = new PathSegment(getPenColor());
+        Point2D.Double penPos = getPenPosition();
+        if (penPos != null) {
+            currentPathSegment.addPoint(penPos);
         }
     }
 
@@ -212,8 +255,8 @@ public class Model implements Serializable { // Serializableを実装
      * ロード後Viewにデータの更新を通知する。
      *
      * @param loadedPathSegments 軌跡のデータ (PathSegmentのリスト)
-     * @param penColor  ペンの色
-     * @param penSize   ペンのサイズ
+     * @param penColor           ペンの色
+     * @param penSize            ペンのサイズ
      */
     private void notifyViewsLoading(List<PathSegment> loadedPathSegments, Color penColor, double penSize) { // 引数を変更
         for (View view : views) {
@@ -247,6 +290,7 @@ public class Model implements Serializable { // Serializableを実装
 
     /**
      * 軌跡の取得メソッドを変更
+     *
      * @return PathSegmentのリストと現在のPathSegmentを結合したリスト
      */
     public List<PathSegment> getPathSegments() { // getLocus() から変更
@@ -254,7 +298,8 @@ public class Model implements Serializable { // Serializableを実装
         List<PathSegment> allSegments = new ArrayList<>(pathSegments);
         // currentPathSegmentが空でなければ追加 (描画中に点が追加されるため、この時点で追加する)
         if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
-            allSegments.add(new PathSegment(currentPathSegment.getColor(), new ArrayList<>(currentPathSegment.getPoints())));
+            allSegments.add(
+                    new PathSegment(currentPathSegment.getColor(), new ArrayList<>(currentPathSegment.getPoints())));
         }
         return allSegments;
     }
@@ -262,11 +307,13 @@ public class Model implements Serializable { // Serializableを実装
     /**
      * ペンの色を変更する。
      * 色を変更する際に、現在の描画セグメントを終了し、新しい色のセグメントを開始する。
+     *
      * @param newColor 新しいペンの色
      */
     public void changePenColor(Color newColor) {
         // 現在のセグメントが空でなく、新しい色と異なる場合のみ、セグメントを終了し新しいものを開始
-        if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty() && !currentPathSegment.getColor().equals(newColor)) {
+        if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()
+                && !currentPathSegment.getColor().equals(newColor)) {
             pathSegments.add(currentPathSegment); // 現在のセグメントをリストに追加
         }
         // ペンの色を更新
@@ -323,6 +370,7 @@ public class Model implements Serializable { // Serializableを実装
 
     /**
      * ピニオンギアの速度を取得する。
+     *
      * @return ピニオンギアの速度
      */
     public double getPinionGearSpeed() {
@@ -578,7 +626,8 @@ public class Model implements Serializable { // Serializableを実装
                 stop();
 
                 // ロードされたパスセグメントをViewに通知する (locusDataから変更)
-                notifyViewsLoading(this.pathSegments, this.pinionGear.getPen().getColor(), this.pinionGear.getPen().getPenSize());
+                notifyViewsLoading(this.pathSegments, this.pinionGear.getPen().getColor(),
+                        this.pinionGear.getPen().getPenSize());
 
                 // ロード後にcurrentPathSegmentを適切に設定する
                 if (pathSegments != null && !pathSegments.isEmpty()) {
@@ -586,7 +635,8 @@ public class Model implements Serializable { // Serializableを実装
                     // ロードされたセグメントの最後の点を引き継ぐ
                     PathSegment lastLoadedSegment = pathSegments.get(pathSegments.size() - 1);
                     if (!lastLoadedSegment.getPoints().isEmpty()) {
-                        currentPathSegment = new PathSegment(lastLoadedSegment.getColor(), new ArrayList<>(lastLoadedSegment.getPoints()));
+                        currentPathSegment = new PathSegment(lastLoadedSegment.getColor(),
+                                new ArrayList<>(lastLoadedSegment.getPoints()));
                     } else {
                         currentPathSegment = new PathSegment(this.pinionGear.getPen().getColor());
                     }
@@ -659,6 +709,12 @@ public class Model implements Serializable { // Serializableを実装
 
         this.pauseTime = 0; // 一時停止時間もリセット
         this.startTime = System.currentTimeMillis(); // 開始時間もリセット
+
+        // 多重実行防止: タイマーが動いていれば止める
+        if (timer != null && timer.isRunning()) {
+            timer.stop();
+        }
+
     }
 
     // スパーギアとピニオンギアのゲッターを追加 (SpiroIOがModelをロードする際に必要になる可能性)

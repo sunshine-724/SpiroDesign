@@ -138,6 +138,32 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
      */
     @Override
     public void mouseReleased(MouseEvent e_release) {
+        if (draggingMode == DraggingMode.MOVE_PINION) {
+            Point2D.Double newCenter = model.getPinionGearPosition();
+            double newRadius = model.getPinionGearRadius();
+            Point2D.Double penPos = model.getPenPosition();
+
+            double dx = penPos.x - newCenter.x;
+            double dy = penPos.y - newCenter.y;
+            double dist = Math.hypot(dx, dy);
+            if (dist > newRadius) {
+                dist = newRadius;
+                double angle = Math.atan2(dy, dx);
+                penPos.setLocation(newCenter.x + dist * Math.cos(angle), newCenter.y + dist * Math.sin(angle));
+                model.getPinionGear().getPen().setPosition(penPos);
+            }
+            model.getPinionGear().alpha = Math.atan2(dy, dx);
+
+            // --- 追加: スパーギア中心とピニオンギア中心の角度をthetaOffsetにセット ---
+            Point2D.Double spurCenter = model.getSpurGearPosition();
+            if (spurCenter != null && newCenter != null) {
+                double thetaOffset = -Math.atan2(newCenter.y - spurCenter.y, newCenter.x - spurCenter.x);
+                model.getPinionGear().setThetaOffset(thetaOffset);
+            }
+
+            model.startNewPathSegment();
+            model.resetSpirographTime();
+        }
         draggingMode = DraggingMode.NONE;
         model.mouseReleased(e_release.getPoint());
     }

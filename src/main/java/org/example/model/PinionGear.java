@@ -28,6 +28,7 @@ public class PinionGear extends SpiroGear implements Serializable {
      * ギアの回転状態を表す。
      */
     public double theta;
+    public double thetaOffset; // 追加: 現在の中心角度のオフセット
 
     /**
      * ピニオンギアの角加速度。
@@ -75,6 +76,7 @@ public class PinionGear extends SpiroGear implements Serializable {
         super(DEFAULT_POSITION, DEFAULT_RADIUS, DEFAULT_COLOR);
         this.speed = 1.0; // 変更: デフォルトの速度を1/10に設定 (10.0 から 1.0 へ)
         this.theta = 0.0; // 初期角度を設定
+        this.thetaOffset = 0.0; // 追加
         this.alpha = DEFAULT_PEN_OFFSET_ANGLE; // ペン先のオフセット角度を設定
 
         // Penオブジェクトの生成と初期位置の設定例
@@ -108,7 +110,7 @@ public class PinionGear extends SpiroGear implements Serializable {
      * @param spurPosition スパーギアの中心位置（ワールド座標）
      */
     public void move(long time, Double spurRadius, Point2D.Double spurPosition) {
-        theta = speed * time * 0.001; // 時間を秒に変換し、角度を計算
+        theta = speed * time * 0.001 + thetaOffset; // 変更: オフセットを加算
 
         // ピニオンギアの中心の絶対座標を計算
         // スパーギアの中心を原点(0,0)として、ピニオンギアの中心がスパーギアの周りを公転する。
@@ -228,5 +230,21 @@ public class PinionGear extends SpiroGear implements Serializable {
      */
     public double getSpeed() {
         return speed;
+    }
+
+    /**
+     * thetaOffsetを設定する
+     * @param offset 新しいthetaOffset
+     */
+    public void setThetaOffset(double offset) {
+        this.thetaOffset = offset;
+    }
+
+    /**
+     * thetaOffsetを取得する
+     * @return thetaOffset
+     */
+    public double getThetaOffset() {
+        return thetaOffset;
     }
 }
