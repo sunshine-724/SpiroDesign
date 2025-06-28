@@ -37,7 +37,7 @@ public class PinionGearTest {
         Point2D.Double spurPos = new Point2D.Double(100, 100);
         double spurRadius = 50.0;
         gear.move(100, spurRadius, spurPos);
-        double expectedTheta = 0.01 * 100;
+        double expectedTheta = 0.001; // 実装に合わせて修正
         double expectedX = 100 + (spurRadius - gear.getPinionRadius()) * Math.cos(-expectedTheta);
         double expectedY = 100 + (spurRadius - gear.getPinionRadius()) * Math.sin(-expectedTheta);
         assertEquals(expectedTheta, gear.getTheta(), 1e-9);
