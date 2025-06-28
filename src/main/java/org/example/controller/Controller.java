@@ -242,6 +242,8 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
     public void onMenuButtonClicked(String buttonName) {
         switch (buttonName) {
             case "Start":
+                // --- 追加: ロード済み軌跡をクリア ---
+                view.clearLoadedLocusData();
                 model.start();
                 break;
             case "Stop":

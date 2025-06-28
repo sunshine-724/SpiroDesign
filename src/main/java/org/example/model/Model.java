@@ -143,7 +143,6 @@ public class Model implements Serializable { // Serializableを実装
             double dy = penPos.y - spurCenter.y;
             double dist = Math.hypot(dx, dy);
             double expectedDist = spurRadius - pinionRadius;
-            // ピニオンギアの内側（スパーギア中心からペンまでの距離 < スパーギア半径）でのみ初期化
             if (dist < spurRadius) {
                 if (dist > 1e-6) {
                     double ratio = expectedDist / dist;
@@ -158,10 +157,20 @@ public class Model implements Serializable { // Serializableを実装
             }
         }
 
-        System.out.println("start");
+        // --- 安定化のための追加処理 ---
+        // pathSegmentsやcurrentPathSegmentがnullの場合は初期化
+        if (pathSegments == null) {
+            pathSegments = new ArrayList<>();
+        }
+        if (currentPathSegment == null) {
+            currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
+        }
+        // タイマーが既に動いている場合は何もしない
         if (!timer.isRunning()) {
             timer.start();
+            // pauseTimeが0でなければ一時停止からの再開、0なら新規開始
             startTime = System.currentTimeMillis() - pauseTime;
+            pauseTime = 0;
         }
     }
 
@@ -418,7 +427,14 @@ public class Model implements Serializable { // Serializableを実装
      * @param position ピニオンギアのペンの位置(絶対座標)
      */
     public void setPenPosition(Point2D.Double position) {
+        // 現在のセグメントが空でなければ追加
+        if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
+            pathSegments.add(currentPathSegment);
+        }
         pinionGear.setPenPosition(position);
+        // 新しいセグメントを開始
+        currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
+        currentPathSegment.addPoint(position);
     }
 
     /**
@@ -428,7 +444,14 @@ public class Model implements Serializable { // Serializableを実装
      */
     public void setPenPosition(Point2D pos) {
         Point2D.Double newPos = new Point2D.Double(pos.getX(), pos.getY());
+        // 現在のセグメントが空でなければ追加
+        if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
+            pathSegments.add(currentPathSegment);
+        }
         pinionGear.setPenPosition(newPos);
+        // 新しいセグメントを開始
+        currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
+        currentPathSegment.addPoint(newPos);
     }
 
     /**
