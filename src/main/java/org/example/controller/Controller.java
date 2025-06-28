@@ -303,15 +303,15 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
                 }
                 break;
             case "Small":
-                model.getPinionGear().getPen().setPenSize(1.0);
+                model.changePenSize(1.0);
                 view.repaint();
                 break;
             case "Medium":
-                model.getPinionGear().getPen().setPenSize(2.0); // 小さめに
+                model.changePenSize(2.0);
                 view.repaint();
                 break;
             case "Large":
-                model.getPinionGear().getPen().setPenSize(3.0); // 小さめに
+                model.changePenSize(3.0);
                 view.repaint();
                 break;
             default:

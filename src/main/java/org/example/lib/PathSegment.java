@@ -17,24 +17,38 @@ public class PathSegment implements Serializable {
     private List<Point2D.Double> points;
     /** このセグメントの色 */
     private Color color;
+    /** 追加: セグメントごとのペンサイズ */
+    private double penSize;
 
     /**
      * 指定された色で新しいPathSegmentを初期化する。
      * @param color このセグメントの描画色
      */
     public PathSegment(Color color) {
+        this(color, 2.0);
+    }
+
+    /**
+     * 指定された色とペンサイズで新しいPathSegmentを初期化する。
+     * @param color このセグメントの描画色
+     * @param penSize このセグメントのペンサイズ
+     */
+    public PathSegment(Color color, double penSize) {
         this.color = color;
+        this.penSize = penSize;
         this.points = new ArrayList<>();
     }
 
     /**
-     * 指定された色と既存の点のリストで新しいPathSegmentを初期化する。
+     * 指定された色、ペンサイズ、既存の点のリストで新しいPathSegmentを初期化する。
      * (デシリアライズ後やクローン作成時に便利)
      * @param color このセグメントの描画色
+     * @param penSize このセグメントのペンサイズ
      * @param points このセグメントの点リスト
      */
-    public PathSegment(Color color, List<Point2D.Double> points) {
+    public PathSegment(Color color, double penSize, List<Point2D.Double> points) {
         this.color = color;
+        this.penSize = penSize;
         this.points = new ArrayList<>(points); // ポイントリストをコピーして安全性を高める
     }
 
@@ -60,5 +74,13 @@ public class PathSegment implements Serializable {
      */
     public Color getColor() {
         return color;
+    }
+
+    /**
+     * 追加: このセグメントのペンサイズを取得
+     * @return セグメントのペンサイズ
+     */
+    public double getPenSize() {
+        return penSize;
     }
 }

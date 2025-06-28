@@ -108,7 +108,9 @@ public class Model implements Serializable { // Serializableを実装
             // ロードされたセグメントの最後の点を引き継ぐ
             PathSegment lastLoadedSegment = pathSegments.get(pathSegments.size() - 1);
             if (!lastLoadedSegment.getPoints().isEmpty()) {
-                currentPathSegment = new PathSegment(lastLoadedSegment.getColor(),
+                currentPathSegment = new PathSegment(
+                        lastLoadedSegment.getColor(),
+                        lastLoadedSegment.getPenSize(),
                         new ArrayList<>(lastLoadedSegment.getPoints()));
             } else {
                 currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
@@ -223,11 +225,39 @@ public class Model implements Serializable { // Serializableを実装
         if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
             pathSegments.add(currentPathSegment);
         }
-        currentPathSegment = new PathSegment(getPenColor());
+        currentPathSegment = new PathSegment(getPenColor(), getPenSize());
         Point2D.Double penPos = getPenPosition();
         if (penPos != null) {
             currentPathSegment.addPoint(penPos);
         }
+    }
+
+    /**
+     * ペンの色を変更する。
+     * 色を変更する際に、現在の描画セグメントを終了し、新しい色のセグメントを開始する。
+     * @param newColor 新しいペンの色
+     */
+    public void changePenColor(Color newColor) {
+        if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()
+                && !currentPathSegment.getColor().equals(newColor)) {
+            pathSegments.add(currentPathSegment);
+        }
+        pinionGear.getPen().changeColor(newColor);
+        currentPathSegment = new PathSegment(newColor, getPenSize());
+    }
+
+    /**
+     * ペンサイズを変更する。
+     * サイズを変更する際に、現在の描画セグメントを終了し、新しいサイズのセグメントを開始する。
+     * @param newSize 新しいペンサイズ
+     */
+    public void changePenSize(double newSize) {
+        if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()
+                && currentPathSegment.getPenSize() != newSize) {
+            pathSegments.add(currentPathSegment);
+        }
+        pinionGear.getPen().setPenSize(newSize);
+        currentPathSegment = new PathSegment(getPenColor(), newSize);
     }
 
     /**
@@ -294,32 +324,15 @@ public class Model implements Serializable { // Serializableを実装
      * @return PathSegmentのリストと現在のPathSegmentを結合したリスト
      */
     public List<PathSegment> getPathSegments() { // getLocus() から変更
-        // 現在描画中のセグメントも常に含めるようにする
         List<PathSegment> allSegments = new ArrayList<>(pathSegments);
-        // currentPathSegmentが空でなければ追加 (描画中に点が追加されるため、この時点で追加する)
         if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
-            allSegments.add(
-                    new PathSegment(currentPathSegment.getColor(), new ArrayList<>(currentPathSegment.getPoints())));
+            allSegments.add(new PathSegment(
+                currentPathSegment.getColor(),
+                currentPathSegment.getPenSize(),
+                new ArrayList<>(currentPathSegment.getPoints())
+            ));
         }
         return allSegments;
-    }
-
-    /**
-     * ペンの色を変更する。
-     * 色を変更する際に、現在の描画セグメントを終了し、新しい色のセグメントを開始する。
-     *
-     * @param newColor 新しいペンの色
-     */
-    public void changePenColor(Color newColor) {
-        // 現在のセグメントが空でなく、新しい色と異なる場合のみ、セグメントを終了し新しいものを開始
-        if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()
-                && !currentPathSegment.getColor().equals(newColor)) {
-            pathSegments.add(currentPathSegment); // 現在のセグメントをリストに追加
-        }
-        // ペンの色を更新
-        pinionGear.getPen().changeColor(newColor);
-        // 新しい色のセグメントを開始
-        currentPathSegment = new PathSegment(newColor);
     }
 
     /**
@@ -635,7 +648,9 @@ public class Model implements Serializable { // Serializableを実装
                     // ロードされたセグメントの最後の点を引き継ぐ
                     PathSegment lastLoadedSegment = pathSegments.get(pathSegments.size() - 1);
                     if (!lastLoadedSegment.getPoints().isEmpty()) {
-                        currentPathSegment = new PathSegment(lastLoadedSegment.getColor(),
+                        currentPathSegment = new PathSegment(
+                                lastLoadedSegment.getColor(),
+                                lastLoadedSegment.getPenSize(),
                                 new ArrayList<>(lastLoadedSegment.getPoints()));
                     } else {
                         currentPathSegment = new PathSegment(this.pinionGear.getPen().getColor());

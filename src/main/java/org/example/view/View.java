@@ -429,23 +429,20 @@ public class View extends JPanel {
         java.awt.Stroke originalStroke = g2d.getStroke();
 
         List<PathSegment> segmentsToDraw;
-        double penSizeToUse;
 
-        // ロードされたデータがある場合はそれを使用し、ない場合はModelから取得
         if (loadedPathSegments != null && !loadedPathSegments.isEmpty()) {
             segmentsToDraw = loadedPathSegments;
-            penSizeToUse = loadedPenSize != -1.0 ? loadedPenSize : model.getPenSize();
         } else {
-            segmentsToDraw = model.getPathSegments(); // ModelからPathSegmentのリストを取得
-            penSizeToUse = model.getPenSize();
+            segmentsToDraw = model.getPathSegments();
         }
 
-        g2d.setStroke(new BasicStroke((float) penSizeToUse));
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         if (segmentsToDraw != null) {
             for (PathSegment segment : segmentsToDraw) {
-                g2d.setColor(segment.getColor()); // セグメントの色を設定
+                g2d.setColor(segment.getColor());
+                float penSize = (float) segment.getPenSize();
+                g2d.setStroke(new BasicStroke(penSize));
                 List<Point2D.Double> points = segment.getPoints();
                 if (points != null && points.size() > 1) {
                     for (int i = 0; i < points.size() - 1; i++) {
@@ -829,3 +826,4 @@ public class View extends JPanel {
         return showPenTip;
     }
 }
+
