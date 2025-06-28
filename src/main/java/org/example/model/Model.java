@@ -4,7 +4,7 @@ import java.awt.Color;
 import java.awt.Point;
 import java.awt.geom.*;
 import java.io.File;
-import java.io.IOException; // IOExceptionをインポート
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +14,7 @@ import javax.swing.Timer;
 import org.example.spiroIO.SpiroIO;
 import org.example.view.View;
 import org.example.lib.Pair;
-import org.example.lib.PathSegment; // 追加: PathSegmentをインポート
+import org.example.lib.PathSegment;
 
 /*
  * Modelクラスは、Spiro.appのデータを管理するクラス。
@@ -624,10 +624,18 @@ public class Model implements Serializable { // Serializableを実装
                 Model loadedModel = pair.first; // ロードされたModelインスタンス
                 Pen loadedPen = pair.second; // ロードされたPenインスタンス
 
-                // ロードされたデータで現在のモデルの状態を更新
+                // --- ここから修正 ---
+                // ロードされたpathSegmentsを今あるリストに追加
+                if (this.pathSegments == null) {
+                    this.pathSegments = new ArrayList<>();
+                }
+                List<PathSegment> loadedSegments = loadedModel.getPathSegments();
+                if (loadedSegments != null && !loadedSegments.isEmpty()) {
+                    this.pathSegments.addAll(loadedSegments);
+                }
+                // ギア情報・ペン情報は上書き
                 this.spurGear = loadedModel.getSpurGear();
                 this.pinionGear = loadedModel.getPinionGear();
-                this.pathSegments = loadedModel.getPathSegments(); // locus から変更
 
                 // ロードされたペンの状態を現在のピニオンギアのペンに反映させる
                 this.pinionGear.getPen().setPosition(loadedPen.getPosition());
@@ -638,31 +646,18 @@ public class Model implements Serializable { // Serializableを実装
                 this.startTime = System.currentTimeMillis();
                 stop();
 
-                // ロードされたパスセグメントをViewに通知する (locusDataから変更)
+                // Viewに追加後の全軌跡を通知
                 notifyViewsLoading(this.pathSegments, this.pinionGear.getPen().getColor(),
                         this.pinionGear.getPen().getPenSize());
 
-                // ロード後にcurrentPathSegmentを適切に設定する
-                if (pathSegments != null && !pathSegments.isEmpty()) {
-                    // 最後のセグメントをcurrentPathSegmentとして再開
-                    // ロードされたセグメントの最後の点を引き継ぐ
-                    PathSegment lastLoadedSegment = pathSegments.get(pathSegments.size() - 1);
-                    if (!lastLoadedSegment.getPoints().isEmpty()) {
-                        currentPathSegment = new PathSegment(
-                                lastLoadedSegment.getColor(),
-                                lastLoadedSegment.getPenSize(),
-                                new ArrayList<>(lastLoadedSegment.getPoints()));
-                    } else {
-                        currentPathSegment = new PathSegment(this.pinionGear.getPen().getColor());
-                    }
-                    pathSegments.remove(pathSegments.size() - 1); // Remove the last segment as it will be extended
-                } else {
-                    // If no path segments loaded, start a new one
-                    currentPathSegment = new PathSegment(this.pinionGear.getPen().getColor());
-                    pathSegments = new ArrayList<>(); // pathSegmentsも初期化
+                // currentPathSegmentは新規で開始（既存の点があれば追加してから）
+                if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
+                    this.pathSegments.add(currentPathSegment);
                 }
+                currentPathSegment = new PathSegment(this.pinionGear.getPen().getColor(), this.pinionGear.getPen().getPenSize());
 
                 return true;
+                // --- ここまで修正 ---
             } else {
                 System.err.println("Failed to load data: No data found in the file.");
                 return false;
@@ -714,7 +709,15 @@ public class Model implements Serializable { // Serializableを実装
         this.spurGear = new SpurGear();
         this.pinionGear = new PinionGear();
         // 必要に応じてペンの位置もリセット
-        this.pinionGear.getPen().setPosition(new Point2D.Double(0, 0)); // Penのデフォルト位置をModelに設定
+        // --- 修正: ペンの初期位置をピニオンギアの中心＋オフセットにする ---
+        Point2D.Double pinionCenter = this.pinionGear.getPinionPosition();
+        double penOffset = 25.0; // PinionGearのDEFAULT_PEN_OFFSET_RADIUSと合わせる
+        double angle = 0.0;
+        Point2D.Double penPos = new Point2D.Double(
+            pinionCenter.x + penOffset * Math.cos(angle),
+            pinionCenter.y + penOffset * Math.sin(angle)
+        );
+        this.pinionGear.getPen().setPosition(penPos);
         this.pinionGear.getPen().setPenSize(Pen.DEFAULT_PEN_SIZE);
         this.pinionGear.getPen().changeColor(Pen.DEFAULT_COLOR);
 

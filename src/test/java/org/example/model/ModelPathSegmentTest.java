@@ -93,4 +93,46 @@ class ModelPathSegmentTest {
         assertEquals(p1, segments.get(0).getPoints().get(0));
         assertEquals(p2, segments.get(1).getPoints().get(0));
     }
+
+    @Test
+    void testNoDuplicateSegmentOnSameColorOrSize() {
+        Point2D.Double p1 = new Point2D.Double(1, 1);
+        model.setPenPosition(p1);
+        model.changePenColor(Color.BLACK); // 既に黒
+        model.changePenSize(2.0); // 既に2.0
+        Point2D.Double p2 = new Point2D.Double(2, 2);
+        model.setPenPosition(p2);
+        List<PathSegment> segments = model.getPathSegments();
+        assertEquals(1, segments.size());
+        assertEquals(2, segments.get(0).getPoints().size());
+    }
+
+    @Test
+    void testMultipleSegmentsWithColorAndSizeChange() {
+        model.setPenPosition(new Point2D.Double(1, 1));
+        model.changePenColor(Color.BLUE);
+        model.setPenPosition(new Point2D.Double(2, 2));
+        model.changePenSize(5.0);
+        model.setPenPosition(new Point2D.Double(3, 3));
+        List<PathSegment> segments = model.getPathSegments();
+        assertEquals(3, segments.size());
+        assertEquals(Color.BLACK, segments.get(0).getColor());
+        assertEquals(Color.BLUE, segments.get(1).getColor());
+        assertEquals(Color.BLUE, segments.get(2).getColor());
+        assertEquals(2.0, segments.get(0).getPenSize());
+        assertEquals(2.0, segments.get(1).getPenSize());
+        assertEquals(5.0, segments.get(2).getPenSize());
+    }
+
+    @Test
+    void testSetPenPositionTwiceCreatesTwoSegments() {
+        Point2D.Double p1 = new Point2D.Double(10, 10);
+        Point2D.Double p2 = new Point2D.Double(20, 20);
+        model.setPenPosition(p1);
+        model.setPenPosition(p2); // setPenPositionは新セグメントを開始
+        List<PathSegment> segments = model.getPathSegments();
+        assertEquals(2, segments.size());
+        assertEquals(p1, segments.get(0).getPoints().get(0));
+        assertEquals(p2, segments.get(1).getPoints().get(0));
+    }
 }
