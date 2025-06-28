@@ -397,7 +397,7 @@ public class Model implements Serializable { // Serializableを実装
      */
     public void changeSpurGearRadius(Double radius) {
         spurGear.changeRadius(radius);
-        notifiyViewsChangeAndPinionRadius(radius);
+        // notifiyViewsChangeAndPinionRadius(radius); // ← 削除
     }
 
     /**
@@ -460,7 +460,7 @@ public class Model implements Serializable { // Serializableを実装
      */
     public void setSpurRadius(double radius) {
         spurGear.changeRadius(radius);
-        notifiyViewsChangeAndPinionRadius(radius);
+        // notifiyViewsChangeAndPinionRadius(radius); // ← 削除
     }
 
     /**

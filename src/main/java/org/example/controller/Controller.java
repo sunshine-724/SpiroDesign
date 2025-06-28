@@ -190,7 +190,7 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
                 Point2D spurCenterForResize = model.getSpurGearPosition();
                 if (spurCenterForResize != null) {
                     double newRadius = currentWorld.distance(spurCenterForResize);
-                    model.setSpurRadius(newRadius);
+                    model.setSpurRadius(newRadius); // ドラッグ中も半径を即時変更
                 }
                 break;
 
