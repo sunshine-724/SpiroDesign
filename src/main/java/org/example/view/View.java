@@ -440,8 +440,9 @@ public class View extends JPanel {
 
         if (segmentsToDraw != null) {
             for (PathSegment segment : segmentsToDraw) {
-                g2d.setColor(segment.getColor());
                 float penSize = (float) segment.getPenSize();
+                System.out.println("View.displaySpirographLocus: penSize = " + penSize);
+                g2d.setColor(segment.getColor());
                 g2d.setStroke(new BasicStroke(penSize));
                 List<Point2D.Double> points = segment.getPoints();
                 if (points != null && points.size() > 1) {

@@ -118,13 +118,13 @@ public class Model implements Serializable { // Serializableを実装
                         lastLoadedSegment.getPenSize(),
                         new ArrayList<>(lastLoadedSegment.getPoints()));
             } else {
-                currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
+                currentPathSegment = new PathSegment(pinionGear.getPen().getColor(), getPenSize());
             }
             // ロードされたリストから最後のセグメントを削除し、currentPathSegmentで拡張できるようにする
             pathSegments.remove(pathSegments.size() - 1);
         } else {
             // ロードされたパスがない場合、新しいセグメントを開始
-            currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
+            currentPathSegment = new PathSegment(pinionGear.getPen().getColor(), getPenSize());
             pathSegments = new ArrayList<>(); // pathSegmentsも初期化
         }
 
@@ -144,7 +144,7 @@ public class Model implements Serializable { // Serializableを実装
             pathSegments = new ArrayList<>();
         }
         if (currentPathSegment == null) {
-            currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
+            currentPathSegment = new PathSegment(pinionGear.getPen().getColor(), getPenSize());
         }
         if (timer.isRunning()) {
             return; // 多重実行防止
@@ -242,6 +242,7 @@ public class Model implements Serializable { // Serializableを実装
      * @param newSize 新しいペンサイズ
      */
     public void changePenSize(double newSize) {
+        System.out.println("Model.changePenSize called: " + newSize);
         if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()
                 && currentPathSegment.getPenSize() != newSize) {
             pathSegments.add(currentPathSegment);
@@ -265,7 +266,7 @@ public class Model implements Serializable { // Serializableを実装
 
         // currentPathSegmentがnullの場合は初期化（通常はresetGearsやreadObjectで初期化される）
         if (currentPathSegment == null) {
-            currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
+            currentPathSegment = new PathSegment(pinionGear.getPen().getColor(), getPenSize());
             pathSegments.add(currentPathSegment);
         }
         currentPathSegment.addPoint(penPosition);
@@ -479,13 +480,11 @@ public class Model implements Serializable { // Serializableを実装
      */
     public void setPenPosition(Point2D.Double position) {
         System.out.println("Model.setPenPosition called: " + position);
-        // 現在のセグメントが空でなければ追加
         if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
             pathSegments.add(currentPathSegment);
         }
         pinionGear.setPenPosition(position);
-        // 新しいセグメントを開始
-        currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
+        currentPathSegment = new PathSegment(pinionGear.getPen().getColor(), getPenSize());
         currentPathSegment.addPoint(position);
     }
 
@@ -496,9 +495,7 @@ public class Model implements Serializable { // Serializableを実装
      */
     public void setPenPosition(Point2D pos) {
         Point2D.Double newPos = new Point2D.Double(pos.getX(), pos.getY());
-        // 追加: 再配置座標を出力
         System.out.println("Pen position set by click: " + newPos);
-        // 現在のセグメントが空でなければ追加
         if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
             pathSegments.add(currentPathSegment);
         }
@@ -538,8 +535,7 @@ public class Model implements Serializable { // Serializableを実装
         }
         // --- ここまで逆算ロジック追加 ---
 
-        // 新しいセグメントを開始
-        currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
+        currentPathSegment = new PathSegment(pinionGear.getPen().getColor(), getPenSize());
         currentPathSegment.addPoint(newPos);
     }
 
@@ -751,7 +747,7 @@ public class Model implements Serializable { // Serializableを実装
 
         // 軌跡もクリアし、新しいセグメントを開始
         this.pathSegments = new ArrayList<>(); // locus から変更
-        this.currentPathSegment = new PathSegment(this.pinionGear.getPen().getColor()); // 新しいセグメントを開始
+        this.currentPathSegment = new PathSegment(this.pinionGear.getPen().getColor(), getPenSize()); // 新しいセグメントを開始
 
         this.pauseTime = 0; // 一時停止時間もリセット
         this.startTime = System.currentTimeMillis(); // 開始時間もリセット
@@ -772,4 +768,5 @@ public class Model implements Serializable { // Serializableを実装
         return pinionGear;
     }
 }
+
 
