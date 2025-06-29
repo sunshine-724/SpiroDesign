@@ -25,7 +25,7 @@ class ModelStartTest {
 
         model.start();
         // タイマーで軌跡が追加されるまで少し待つ
-        Thread.sleep(200);
+        Thread.sleep(500);
 
         List<PathSegment> after = model.getPathSegments();
         // 軌跡が1つ以上追加されていること
@@ -49,7 +49,7 @@ class ModelStartTest {
     void testStartStopStartPathAndPenPosition() throws InterruptedException {
         // 1回目のstart
         model.start();
-        Thread.sleep(150);
+        Thread.sleep(500);
         Point2D.Double penAfterFirstStart = model.getPenPosition();
         List<PathSegment> pathAfterFirstStart = model.getPathSegments();
         assertNotNull(penAfterFirstStart);
@@ -64,7 +64,7 @@ class ModelStartTest {
 
         // 2回目のstart
         model.start();
-        Thread.sleep(150);
+        Thread.sleep(500);
         Point2D.Double penAfterSecondStart = model.getPenPosition();
         List<PathSegment> pathAfterSecondStart = model.getPathSegments();
         assertNotNull(penAfterSecondStart);
@@ -81,7 +81,7 @@ class ModelStartTest {
     void testStartStopWaitStartWithTime() throws InterruptedException {
         // 1回目のstart
         model.start();
-        Thread.sleep(120);
+        Thread.sleep(500);
         Point2D.Double penAfterFirstStart = model.getPenPosition();
         List<PathSegment> pathAfterFirstStart = model.getPathSegments();
         assertNotNull(penAfterFirstStart);
@@ -95,7 +95,7 @@ class ModelStartTest {
         int pointsAfterStop = pathAfterStop.stream().mapToInt(seg -> seg.getPoints().size()).sum();
 
         // 十分待機（stop中はペン位置も軌跡も変化しないことを確認）
-        Thread.sleep(200);
+        Thread.sleep(500);
         Point2D.Double penAfterWait = model.getPenPosition();
         List<PathSegment> pathAfterWait = model.getPathSegments();
         int pointsAfterWait = pathAfterWait.stream().mapToInt(seg -> seg.getPoints().size()).sum();
@@ -105,7 +105,7 @@ class ModelStartTest {
 
         // 2回目のstart
         model.start();
-        Thread.sleep(120);
+        Thread.sleep(500);
         Point2D.Double penAfterSecondStart = model.getPenPosition();
         List<PathSegment> pathAfterSecondStart = model.getPathSegments();
         int pointsAfterSecondStart = pathAfterSecondStart.stream().mapToInt(seg -> seg.getPoints().size()).sum();
