@@ -496,11 +496,48 @@ public class Model implements Serializable { // Serializableを実装
      */
     public void setPenPosition(Point2D pos) {
         Point2D.Double newPos = new Point2D.Double(pos.getX(), pos.getY());
+        // 追加: 再配置座標を出力
+        System.out.println("Pen position set by click: " + newPos);
         // 現在のセグメントが空でなければ追加
         if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
             pathSegments.add(currentPathSegment);
         }
         pinionGear.setPenPosition(newPos);
+        // --- ここから逆算ロジック追加 ---
+        // 幾何学的逆算: 新しいペン位置からalphaを計算
+        Point2D.Double spurCenter = spurGear.getSpurPosition();
+        Point2D.Double pinionCenter = pinionGear.getPinionPosition();
+        double spurRadius = spurGear.getSpurRadius();
+        double pinionRadius = pinionGear.getPinionRadius();
+        double penOffset = 25.0; // PinionGearのDEFAULT_PEN_OFFSET_RADIUSと合わせる
+
+        if (spurCenter != null && pinionCenter != null) {
+            // 1. ピニオンギア中心角度thetaを計算
+            double dx = pinionCenter.x - spurCenter.x;
+            double dy = pinionCenter.y - spurCenter.y;
+            double theta = -Math.atan2(dy, dx); // 公転角度
+
+            // 2. ピニオンギアの自転角度を計算
+            double rotationAngle = (spurRadius / pinionRadius) * theta;
+
+            // 3. ペンの相対角度alphaを逆算
+            double px = newPos.x - pinionCenter.x;
+            double py = newPos.y - pinionCenter.y;
+            double alpha = Math.atan2(py, px) - rotationAngle;
+
+            // 4. ピニオンギアの内部状態を更新
+            pinionGear.theta = theta;
+            pinionGear.alpha = alpha;
+
+            // 5. savedAlphaも即時更新
+            savedAlpha = alpha;
+            savedTheta = theta;
+            savedPinionCenter = new Point2D.Double(pinionCenter.x, pinionCenter.y);
+
+            System.out.println("Reverse-calculated theta=" + theta + ", alpha=" + alpha);
+        }
+        // --- ここまで逆算ロジック追加 ---
+
         // 新しいセグメントを開始
         currentPathSegment = new PathSegment(pinionGear.getPen().getColor());
         currentPathSegment.addPoint(newPos);
