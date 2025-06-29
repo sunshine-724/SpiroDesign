@@ -174,17 +174,17 @@ public class View extends JPanel {
 
         int initialSpeed = (int) model.getPinionGearSpeed(); // Modelから実際の速度を取得
         if (initialSpeed < 1) initialSpeed = 1;
-        if (initialSpeed > 100) initialSpeed = 100;
+        if (initialSpeed > 20) initialSpeed = 20;
 
 
-        JSlider speedSlider = new JSlider(JSlider.HORIZONTAL, 1, 100, initialSpeed);
+        JSlider speedSlider = new JSlider(JSlider.HORIZONTAL, 1, 20, initialSpeed);
         speedSlider.setPaintTicks(true);
         speedSlider.setSnapToTicks(true);
 
         // カスタムラベルテーブルを作成
         Hashtable<Integer, JLabel> labelTable = new Hashtable<>();
-        labelTable.put(1, new JLabel("1"));
-        labelTable.put(100, new JLabel("100"));
+        labelTable.put(1, new JLabel("Min"));
+        labelTable.put(20, new JLabel("Max"));
         speedSlider.setLabelTable(labelTable);
         speedSlider.setPaintLabels(true);
 
