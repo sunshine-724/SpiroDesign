@@ -352,7 +352,7 @@ public class View extends JPanel {
         java.awt.Stroke originalStroke = g.getStroke();
 
         g.setColor(Color.BLUE);
-        g.setStroke(new BasicStroke(2.0f));
+        g.setStroke(new BasicStroke(1.2f)); // ここを細く
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         double radius = model.getPinionGearRadius();
@@ -385,7 +385,7 @@ public class View extends JPanel {
         java.awt.Stroke originalStroke = g.getStroke();
 
         g.setColor(Color.RED);
-        g.setStroke(new BasicStroke(2.0f));
+        g.setStroke(new BasicStroke(1.2f)); // ここを細く
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         double radius = model.getSpurGearRadius();
