@@ -259,6 +259,9 @@ public class Model implements Serializable { // Serializableを実装
         long currentTime = System.currentTimeMillis() - startTime;
 
         // ピニオンギアの位置とペンの位置を更新
+        // ピニオンギアがスパーギアの内側か外側かを判断してisInnerを設定
+        boolean isInner = getDistanceBetweenGears() < spurGear.getSpurRadius();
+        pinionGear.setInner(isInner); // PinionGearにisInnerフラグをセット
         pinionGear.move(currentTime, spurGear.getSpurRadius(), spurGear.getSpurPosition());
 
         // ペンの位置を取得
@@ -499,23 +502,31 @@ public class Model implements Serializable { // Serializableを実装
         if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
             pathSegments.add(currentPathSegment);
         }
-        pinionGear.setPenPosition(newPos);
-        // --- ここから逆算ロジック追加 ---
-        // 幾何学的逆算: 新しいペン位置からalphaを計算
+
         Point2D.Double spurCenter = spurGear.getSpurPosition();
         Point2D.Double pinionCenter = pinionGear.getPinionPosition();
         double spurRadius = spurGear.getSpurRadius();
         double pinionRadius = pinionGear.getPinionRadius();
-        double penOffset = 25.0; // PinionGearのDEFAULT_PEN_OFFSET_RADIUSと合わせる
 
         if (spurCenter != null && pinionCenter != null) {
-            // 1. ピニオンギア中心角度thetaを計算
-            double dx = pinionCenter.x - spurCenter.x;
-            double dy = pinionCenter.y - spurCenter.y;
-            double theta = -Math.atan2(dy, dx); // 公転角度
+            double dx_pinion_spur = pinionCenter.x - spurCenter.x;
+            double dy_pinion_spur = pinionCenter.y - spurCenter.y;
+            double distanceBetweenCenters = Math.hypot(dx_pinion_spur, dy_pinion_spur);
 
-            // 2. ピニオンギアの自転角度を計算
-            double rotationAngle = (spurRadius / pinionRadius) * theta;
+            boolean isInner = distanceBetweenCenters < spurRadius;
+            pinionGear.setInner(isInner);
+
+            // 1. ピニオンギア中心角度thetaを計算
+            double theta = -Math.atan2(dy_pinion_spur, dx_pinion_spur); // 公転角度
+
+            // 2. ピニオンギアの自転角度の比率を計算
+            double rotationRatio;
+            if (isInner) {
+                rotationRatio = (spurRadius / pinionRadius) - 1; // ハイポサイクロイド
+            } else {
+                rotationRatio = (spurRadius / pinionRadius) + 1; // エピサイクロイド
+            }
+            double rotationAngle = rotationRatio * theta;
 
             // 3. ペンの相対角度alphaを逆算
             double px = newPos.x - pinionCenter.x;
@@ -531,10 +542,10 @@ public class Model implements Serializable { // Serializableを実装
             savedTheta = theta;
             savedPinionCenter = new Point2D.Double(pinionCenter.x, pinionCenter.y);
 
-            System.out.println("Reverse-calculated theta=" + theta + ", alpha=" + alpha);
+            System.out.println("Reverse-calculated theta=" + theta + ", alpha=" + alpha + ", isInner=" + isInner);
         }
-        // --- ここまで逆算ロジック追加 ---
 
+        pinionGear.setPenPosition(newPos);
         currentPathSegment = new PathSegment(pinionGear.getPen().getColor(), getPenSize());
         currentPathSegment.addPoint(newPos);
     }
@@ -767,6 +778,25 @@ public class Model implements Serializable { // Serializableを実装
     public PinionGear getPinionGear() {
         return pinionGear;
     }
+
+    /**
+     * ピニオンギアとスパーギアの中心間の距離を計算する。
+     * @return ギア間の距離
+     */
+    public double getDistanceBetweenGears() {
+        Point2D.Double spurPos = spurGear.getSpurPosition();
+        Point2D.Double pinionPos = pinionGear.getPinionPosition();
+        if (spurPos == null || pinionPos == null) {
+            return 0; // または適切なエラー処理
+        }
+        return spurPos.distance(pinionPos);
+    }
+
+    /**
+     * ピニオンギアがスパーギアの内側にあるかどうかを判断する。
+     * @return 内側にある場合はtrue、外側にある場合はfalse
+     */
+    public boolean isInner() {
+        return getDistanceBetweenGears() < spurGear.getSpurRadius();
+    }
 }
-
-

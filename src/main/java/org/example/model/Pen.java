@@ -65,23 +65,26 @@ public class Pen implements Serializable { // Serializableを実装
      * ペンの位置は、ピニオンギアの中心からの相対位置として計算されるべきである。
      *
      * @param pinionPosition ピニオンギアの絶対位置（中心座標）
-     * @param pinionRadius   ピニオンギアの半径
-     * @param theta          ピニオンギアの回転角度（スパーギアからの相対角度）
+     * @param penOffsetRadius ペン先のピニオンギアに対する相対半径
+     * @param rotationAngle  ピニオンギアの自転角度
      * @param alpha          ペン先のオフセット角度（ピニオンギア中心からの相対角度）
      */
-    public void setPenPosition(Point2D.Double pinionPosition, Double pinionRadius, Double theta, Double alpha) {
+    public void setPenPosition(Point2D.Double pinionPosition, Double penOffsetRadius, Double rotationAngle, Double alpha) {
         System.out.println("setPenPosition called");
         // デバッグ用: 計算値を出力
         System.out.println("pinionPosition.x = " + pinionPosition.x);
         System.out.println("pinionPosition.y = " + pinionPosition.y);
-        System.out.println("pinionRadius = " + pinionRadius);
+        System.out.println("penOffsetRadius = " + penOffsetRadius);
+        System.out.println("rotationAngle = " + rotationAngle);
         System.out.println("alpha = " + alpha);
-        double newX = pinionPosition.x + pinionRadius * Math.cos(alpha);
-        double newY = pinionPosition.y + pinionRadius * Math.sin(alpha);
+
+        double newX = pinionPosition.x + penOffsetRadius * Math.cos(rotationAngle + alpha);
+        double newY = pinionPosition.y + penOffsetRadius * Math.sin(rotationAngle + alpha);
         System.out.println("newX = " + newX);
         System.out.println("newY = " + newY);
         this.position.setLocation(newX, newY);
     }
+
 
     /**
      * ペンの位置を設定するメソッド。

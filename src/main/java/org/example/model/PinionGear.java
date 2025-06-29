@@ -71,6 +71,9 @@ public class PinionGear extends SpiroGear implements Serializable {
     // --- 追加: ペン先までの距離を動的に保持するフィールド ---
     private double penOffsetRadius = DEFAULT_PEN_OFFSET_RADIUS;
 
+    // --- 追加: 内接/外接モードを保持するフラグ ---
+    private boolean isInner = false; // trueなら内接、falseなら外接
+
     /**
      * ピニオンギアを作成するデフォルトコンストラクタ。
      * 初期位置、半径、色を設定する。
@@ -116,10 +119,15 @@ public class PinionGear extends SpiroGear implements Serializable {
     public void move(long time, Double spurRadius, Point2D.Double spurPosition) {
         theta = speed * time * 0.001 + thetaOffset; // 変更: オフセットを加算
 
+        // 公転半径の計算: 内接か外接かで異なる
+        double revolutionRadius;
+        if (isInner) {
+            revolutionRadius = spurRadius - radius; // 内接 (ハイポサイクロイド)
+        } else {
+            revolutionRadius = spurRadius + radius; // 外接 (エピサイクロイド)
+        }
+
         // ピニオンギアの中心の絶対座標を計算
-        // スパーギアの中心を原点(0,0)として、ピニオンギアの中心がスパーギアの周りを公転する。
-        // スパーギアの半径(R)とピニオンギアの半径(r)の差分が、公転半径になる。
-        double revolutionRadius = spurRadius - radius;
         double pinionCenterX = spurPosition.x + revolutionRadius * Math.cos(-theta);
         double pinionCenterY = spurPosition.y + revolutionRadius * Math.sin(-theta);
 
@@ -127,15 +135,16 @@ public class PinionGear extends SpiroGear implements Serializable {
         this.position.setLocation(pinionCenterX, pinionCenterY);
 
         // ペン先の絶対座標を計算
-        // alphaはペンがピニオンギア上に固定されているオフセット角度
-        // ピニオンギアの自転角度は、公転角度thetaとギア比によって決まる。
-        // (R/r - 1) * theta が一般的な自転角度。
-        // または、直接 (R/r) * theta とするスピログラフもあるが、
-        // ここでは (spurRadius / radius) * theta を自転角度の基礎とする。
-        double rotationAngle = (spurRadius / radius) * theta;
+        // 自転角度の係数も内接か外接かで異なる
+        double rotationFactor;
+        if (isInner) {
+            rotationFactor = (spurRadius / radius) - 1; // ハイポサイクロイド
+        } else {
+            rotationFactor = (spurRadius / radius) + 1; // エピサイクロイド
+        }
+        double rotationAngle = rotationFactor * theta;
 
         // ペン先の相対半径（ピニオンギアの中心からの距離）
-        // penOffsetRadiusを使用する
         double penAbsoluteX = pinionCenterX + penOffsetRadius * Math.cos(rotationAngle + alpha);
         double penAbsoluteY = pinionCenterY + penOffsetRadius * Math.sin(rotationAngle + alpha);
 
@@ -268,5 +277,21 @@ public class PinionGear extends SpiroGear implements Serializable {
      */
     public double getThetaOffset() {
         return thetaOffset;
+    }
+
+    /**
+     * ピニオンギアがスパーギアの内側で回転しているか設定する。
+     * @param inner 内側で回転している場合はtrue
+     */
+    public void setInner(boolean inner) {
+        isInner = inner;
+    }
+
+    /**
+     * ピニオンギアがスパーギアの内側で回転しているか取得する。
+     * @return 内側で回転している場合はtrue
+     */
+    public boolean isInner() {
+        return isInner;
     }
 }
