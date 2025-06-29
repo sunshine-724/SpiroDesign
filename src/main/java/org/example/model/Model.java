@@ -70,6 +70,7 @@ public class Model implements Serializable { // Serializableを実装
     private Point2D.Double savedPinionCenter = null;
     private double savedTheta = 0.0;
     private double savedAlpha = 0.0;
+    private boolean savedIsInner = false; // 追加: isInnerの状態を保存するフィールド
 
     /**
      * Modelクラスのコンストラクタ。
@@ -156,6 +157,7 @@ public class Model implements Serializable { // Serializableを実装
                 pinionGear.setPosition(new Point2D.Double(savedPinionCenter.x, savedPinionCenter.y));
                 pinionGear.theta = savedTheta;
                 pinionGear.alpha = savedAlpha;
+                pinionGear.setInner(savedIsInner); // 追加: isInnerの状態を復元
             }
             if (!timer.isRunning()) {
                 timer.start();
@@ -190,6 +192,7 @@ public class Model implements Serializable { // Serializableを実装
             : null;
         savedTheta = pinionGear.theta;
         savedAlpha = pinionGear.alpha;
+        savedIsInner = pinionGear.isInner(); // 追加: isInnerの状態を保存
     }
 
     /**
@@ -520,13 +523,13 @@ public class Model implements Serializable { // Serializableを実装
             double theta = -Math.atan2(dy_pinion_spur, dx_pinion_spur); // 公転角度
 
             // 2. ピニオンギアの自転角度の比率を計算
-            double rotationRatio;
+            double rotationFactor;
             if (isInner) {
-                rotationRatio = (spurRadius / pinionRadius) - 1; // ハイポサイクロイド
+                rotationFactor = (spurRadius / pinionRadius) - 1; // ハイポサイクロイド
             } else {
-                rotationRatio = (spurRadius / pinionRadius) + 1; // エピサイクロイド
+                rotationFactor = (spurRadius / pinionRadius) + 1; // エピサイクロイド
             }
-            double rotationAngle = rotationRatio * theta;
+            double rotationAngle = rotationFactor * theta;
 
             // 3. ペンの相対角度alphaを逆算
             double px = newPos.x - pinionCenter.x;
@@ -541,6 +544,7 @@ public class Model implements Serializable { // Serializableを実装
             savedAlpha = alpha;
             savedTheta = theta;
             savedPinionCenter = new Point2D.Double(pinionCenter.x, pinionCenter.y);
+            savedIsInner = isInner; // 追加: isInnerも保存
 
             System.out.println("Reverse-calculated theta=" + theta + ", alpha=" + alpha + ", isInner=" + isInner);
         }
