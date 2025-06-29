@@ -141,6 +141,22 @@ public class Model implements Serializable { // Serializableを実装
      */
     public void start() {
         System.out.println("start");
+        // --- 追加: ペン位置がピニオンギアの外なら開始しない ---
+        Point2D.Double penPos = getPenPosition();
+        Point2D.Double pinionCenter = getPinionGearPosition();
+        double pinionRadius = getPinionGearRadius();
+        if (penPos != null && pinionCenter != null) {
+            double dist = penPos.distance(pinionCenter);
+            if (dist > pinionRadius) {
+                String msg = "ペンがピニオンギアの外にあるため開始できません。";
+                System.out.println(msg);
+                // --- 追加: Viewにエラーメッセージを通知 ---
+                for (View v : views) {
+                    v.displaySaveSuccessMessage(msg);
+                }
+                return;
+            }
+        }
         if (pathSegments == null) {
             pathSegments = new ArrayList<>();
         }
@@ -801,6 +817,19 @@ public class Model implements Serializable { // Serializableを実装
      * @return 内側にある場合はtrue、外側にある場合はfalse
      */
     public boolean isInner() {
-        return getDistanceBetweenGears() < spurGear.getSpurRadius();
+        double centerDist = getDistanceBetweenGears();
+        double spurRadius = spurGear.getSpurRadius();
+        double pinionRadius = pinionGear.getPinionRadius();
+        double eps = 1e-6;
+        // 内接: 中心間距離 ≒ |スパーギア半径 - ピニオンギア半径|
+        if (Math.abs(centerDist - Math.abs(spurRadius - pinionRadius)) < eps) {
+            return true;
+        }
+        // 外接: 中心間距離 ≒ (スパーギア半径 + ピニオンギア半径)
+        if (Math.abs(centerDist - (spurRadius + pinionRadius)) < eps) {
+            return false;
+        }
+        // それ以外は従来通り
+        return centerDist < spurRadius;
     }
 }
