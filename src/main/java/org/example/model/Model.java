@@ -66,6 +66,11 @@ public class Model implements Serializable { // Serializableを実装
      */
     private static final int FRAME_PER_MILLISECOND = 1000 / 60; // 60 FPS
 
+    // --- 追加: ピニオンギアの状態保存用フィールド ---
+    private Point2D.Double savedPinionCenter = null;
+    private double savedTheta = 0.0;
+    private double savedAlpha = 0.0;
+
     /**
      * Modelクラスのコンストラクタ。
      * スパーギアとピニオンギアのインスタンスを初期化し、SpiroIOを初期化する。
@@ -135,7 +140,6 @@ public class Model implements Serializable { // Serializableを実装
      */
     public void start() {
         System.out.println("start");
-        // --- 0.1秒ディレイ前にピニオンギアの初期化処理を行わないように修正 ---
         if (pathSegments == null) {
             pathSegments = new ArrayList<>();
         }
@@ -145,39 +149,14 @@ public class Model implements Serializable { // Serializableを実装
         if (timer.isRunning()) {
             return; // 多重実行防止
         }
-        // --- 0.1秒遅延してからピニオンギアの初期化とタイマー開始 ---
+        // --- 修正: 逆算ロジックを削除し、保存値を復元 ---
         new javax.swing.Timer(100, e -> {
-            // ピニオンギアの初期化処理はここで行う
-            Point2D.Double penPos = pinionGear.getPen().getPosition();
-            Point2D.Double spurCenter = spurGear.getSpurPosition();
-            double spurRadius = spurGear.getSpurRadius();
-            double pinionRadius = pinionGear.getPinionRadius();
-
-            if (penPos != null && spurCenter != null) {
-                double dx = penPos.x - spurCenter.x;
-                double dy = penPos.y - spurCenter.y;
-                double dist = Math.hypot(dx, dy);
-                double expectedDist = spurRadius - pinionRadius;
-                // --- 数値誤差対策: NaN, Infinity, 負値, 極端な値をガード ---
-                if (!(Double.isNaN(dist) || Double.isInfinite(dist) || dist < 1e-8 || dist > 1e6)) {
-                    if (dist < spurRadius && dist > 1e-6) {
-                        double ratio = expectedDist / dist;
-                        if (!(Double.isNaN(ratio) || Double.isInfinite(ratio) || Math.abs(ratio) > 1e6)) {
-                          double pinionCenterX = spurCenter.x + dx * ratio;
-                          double pinionCenterY = spurCenter.y + dy * ratio;
-                          if (!(Double.isNaN(pinionCenterX) || Double.isNaN(pinionCenterY) ||
-                                Double.isInfinite(pinionCenterX) || Double.isInfinite(pinionCenterY))) {
-                            pinionGear.setPosition(new Point2D.Double(pinionCenterX, pinionCenterY));
-                            double theta = -Math.atan2(pinionCenterY - spurCenter.y, pinionCenterX - spurCenter.x);
-                            pinionGear.theta = theta;
-                            double alpha = Math.atan2(penPos.y - pinionCenterY, penPos.x - pinionCenterX);
-                            pinionGear.alpha = alpha;
-                          }
-                        }
-                    }
-                }
+            // 保存されたピニオンギア状態があれば復元
+            if (savedPinionCenter != null) {
+                pinionGear.setPosition(new Point2D.Double(savedPinionCenter.x, savedPinionCenter.y));
+                pinionGear.theta = savedTheta;
+                pinionGear.alpha = savedAlpha;
             }
-
             if (!timer.isRunning()) {
                 timer.start();
                 startTime = System.currentTimeMillis() - pauseTime;
@@ -194,6 +173,9 @@ public class Model implements Serializable { // Serializableを実装
      */
     public void stop() {
         System.out.println("stop");
+        // ペンの位置を出力
+        Point2D.Double penPos = getPenPosition();
+        System.out.println("Pen position after stop: " + penPos);
         if (!timer.isRunning()) {
             return; // 多重実行防止
         }
@@ -201,6 +183,13 @@ public class Model implements Serializable { // Serializableを実装
         this.pauseTime = 0;
         this.startTime = System.currentTimeMillis();
         resetSpirographTime();
+
+        // --- 追加: ピニオンギアの状態を保存 ---
+        savedPinionCenter = pinionGear.getPinionPosition() != null
+            ? new Point2D.Double(pinionGear.getPinionPosition().x, pinionGear.getPinionPosition().y)
+            : null;
+        savedTheta = pinionGear.theta;
+        savedAlpha = pinionGear.alpha;
     }
 
     /**
@@ -746,3 +735,4 @@ public class Model implements Serializable { // Serializableを実装
         return pinionGear;
     }
 }
+
