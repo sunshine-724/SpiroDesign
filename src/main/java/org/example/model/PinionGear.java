@@ -68,6 +68,9 @@ public class PinionGear extends SpiroGear implements Serializable {
      */
     private static final double DEFAULT_PEN_OFFSET_RADIUS = 25.0; // 例として25.0を設定
 
+    // --- 追加: ペン先までの距離を動的に保持するフィールド ---
+    private double penOffsetRadius = DEFAULT_PEN_OFFSET_RADIUS;
+
     /**
      * ピニオンギアを作成するデフォルトコンストラクタ。
      * 初期位置、半径、色を設定する。
@@ -98,6 +101,7 @@ public class PinionGear extends SpiroGear implements Serializable {
         this.speed = speed;
         this.theta = theta;
         this.alpha = alpha; // ここはペン先のオフセット角度として使う
+        this.penOffsetRadius = DEFAULT_PEN_OFFSET_RADIUS;
     }
 
     /**
@@ -131,9 +135,9 @@ public class PinionGear extends SpiroGear implements Serializable {
         double rotationAngle = (spurRadius / radius) * theta;
 
         // ペン先の相対半径（ピニオンギアの中心からの距離）
-        // ここでは、デフォルトコンストラクタで設定したDEFAULT_PEN_OFFSET_RADIUSを使用する。
-        double penAbsoluteX = pinionCenterX + DEFAULT_PEN_OFFSET_RADIUS * Math.cos(rotationAngle + alpha);
-        double penAbsoluteY = pinionCenterY + DEFAULT_PEN_OFFSET_RADIUS * Math.sin(rotationAngle + alpha);
+        // penOffsetRadiusを使用する
+        double penAbsoluteX = pinionCenterX + penOffsetRadius * Math.cos(rotationAngle + alpha);
+        double penAbsoluteY = pinionCenterY + penOffsetRadius * Math.sin(rotationAngle + alpha);
 
         System.out.println("PinionGear.move: penAbsoluteX=" + penAbsoluteX + ", penAbsoluteY=" + penAbsoluteY);
         pen.setPosition(new Point2D.Double(penAbsoluteX, penAbsoluteY));
@@ -222,7 +226,21 @@ public class PinionGear extends SpiroGear implements Serializable {
      * @param position 新しいペンの位置（絶対座標）
      */
     public void setPenPosition(Point2D.Double position) {
+        // --- 追加: ペン先までの距離を逆算して保存 ---
+        if (this.position != null) {
+            double dx = position.x - this.position.x;
+            double dy = position.y - this.position.y;
+            this.penOffsetRadius = Math.hypot(dx, dy);
+        }
         pen.setPosition(position);
+    }
+
+    // --- 追加: ペン先までの距離のgetter/setter ---
+    public double getPenOffsetRadius() {
+        return penOffsetRadius;
+    }
+    public void setPenOffsetRadius(double r) {
+        this.penOffsetRadius = r;
     }
 
     /**
