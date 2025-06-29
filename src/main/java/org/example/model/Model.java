@@ -141,10 +141,35 @@ public class Model implements Serializable { // Serializableを実装
      */
     public void start() {
         System.out.println("start");
+        // --- 追加: ピニオンギアとスパーギアが接しているかチェック ---
+        Point2D.Double spurCenter = getSpurGearPosition();
+        Point2D.Double pinionCenter = getPinionGearPosition();
+        double spurRadius = getSpurGearRadius();
+        double pinionRadius = getPinionGearRadius();
+        double centerDist = 0;
+        if (spurCenter != null && pinionCenter != null) {
+            centerDist = spurCenter.distance(pinionCenter);
+            double eps = 1e-6;
+            boolean isTouching = false;
+            // 内接: 中心間距離 ≒ |スパーギア半径 - ピニオンギア半径|
+            if (Math.abs(centerDist - Math.abs(spurRadius - pinionRadius)) < eps) {
+                isTouching = true;
+            }
+            // 外接: 中心間距離 ≒ (スパーギア半径 + ピニオンギア半径)
+            if (Math.abs(centerDist - (spurRadius + pinionRadius)) < eps) {
+                isTouching = true;
+            }
+            if (!isTouching) {
+                String msg = "ピニオンギアとスパーギアが接していません。";
+                System.out.println(msg);
+                for (View v : views) {
+                    v.displaySaveSuccessMessage(msg);
+                }
+                return;
+            }
+        }
         // --- 追加: ペン位置がピニオンギアの外なら開始しない ---
         Point2D.Double penPos = getPenPosition();
-        Point2D.Double pinionCenter = getPinionGearPosition();
-        double pinionRadius = getPinionGearRadius();
         if (penPos != null && pinionCenter != null) {
             double dist = penPos.distance(pinionCenter);
             if (dist > pinionRadius) {
