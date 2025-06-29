@@ -70,11 +70,17 @@ public class Pen implements Serializable { // Serializableを実装
      * @param alpha          ペン先のオフセット角度（ピニオンギア中心からの相対角度）
      */
     public void setPenPosition(Point2D.Double pinionPosition, Double pinionRadius, Double theta, Double alpha) {
-        // Penクラスのpositionが「絶対座標」を保持しているという解釈に基づき、
-        // PinionGearのmove()で計算された絶対座標を直接設定するシンプルなsetPositionを内部で呼び出す形にする。
-        // このメソッドのシグネチャを維持しつつ、混乱を避けるためこのように処理する。
-        this.position.setLocation(pinionPosition.x + pinionRadius * Math.cos(alpha),
-                                  pinionPosition.y + pinionRadius * Math.sin(alpha));
+        System.out.println("setPenPosition called");
+        // デバッグ用: 計算値を出力
+        System.out.println("pinionPosition.x = " + pinionPosition.x);
+        System.out.println("pinionPosition.y = " + pinionPosition.y);
+        System.out.println("pinionRadius = " + pinionRadius);
+        System.out.println("alpha = " + alpha);
+        double newX = pinionPosition.x + pinionRadius * Math.cos(alpha);
+        double newY = pinionPosition.y + pinionRadius * Math.sin(alpha);
+        System.out.println("newX = " + newX);
+        System.out.println("newY = " + newY);
+        this.position.setLocation(newX, newY);
     }
 
     /**
@@ -83,6 +89,7 @@ public class Pen implements Serializable { // Serializableを実装
      * @param position 新しい位置
      */
     public void setPosition(Point2D.Double position) {
+        System.out.println("Pen.setPosition called: " + position);
         this.position = position;
     }
 

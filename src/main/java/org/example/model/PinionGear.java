@@ -135,13 +135,14 @@ public class PinionGear extends SpiroGear implements Serializable {
         double penAbsoluteX = pinionCenterX + DEFAULT_PEN_OFFSET_RADIUS * Math.cos(rotationAngle + alpha);
         double penAbsoluteY = pinionCenterY + DEFAULT_PEN_OFFSET_RADIUS * Math.sin(rotationAngle + alpha);
 
-        // ペンオブジェクトに計算された絶対位置を設定
+        System.out.println("PinionGear.move: penAbsoluteX=" + penAbsoluteX + ", penAbsoluteY=" + penAbsoluteY);
         pen.setPosition(new Point2D.Double(penAbsoluteX, penAbsoluteY));
     }
 
     /**
      * ピニオンギアの位置を設定する。
      * 親クラスのsetPositionメソッドをオーバーライドする。
+     *
      * @param position 新しい位置
      */
     @Override // SpiroGearのsetPositionをオーバーライド
@@ -226,6 +227,7 @@ public class PinionGear extends SpiroGear implements Serializable {
 
     /**
      * ピニオンギアの速度を取得する。
+     *
      * @return ピニオンギアの速度
      */
     public double getSpeed() {
@@ -234,6 +236,7 @@ public class PinionGear extends SpiroGear implements Serializable {
 
     /**
      * thetaOffsetを設定する
+     *
      * @param offset 新しいthetaOffset
      */
     public void setThetaOffset(double offset) {
@@ -242,6 +245,7 @@ public class PinionGear extends SpiroGear implements Serializable {
 
     /**
      * thetaOffsetを取得する
+     *
      * @return thetaOffset
      */
     public double getThetaOffset() {

@@ -134,6 +134,7 @@ public class Model implements Serializable { // Serializableを実装
      * タイマーを開始または再開し、描画開始時刻を記録する。
      */
     public void start() {
+        System.out.println("start");
         // --- 0.1秒ディレイ前にピニオンギアの初期化処理を行わないように修正 ---
         if (pathSegments == null) {
             pathSegments = new ArrayList<>();
@@ -488,6 +489,7 @@ public class Model implements Serializable { // Serializableを実装
      * @param position ピニオンギアのペンの位置(絶対座標)
      */
     public void setPenPosition(Point2D.Double position) {
+        System.out.println("Model.setPenPosition called: " + position);
         // 現在のセグメントが空でなければ追加
         if (currentPathSegment != null && !currentPathSegment.getPoints().isEmpty()) {
             pathSegments.add(currentPathSegment);
