@@ -70,18 +70,9 @@ public class Pen implements Serializable { // Serializableを実装
      * @param alpha          ペン先のオフセット角度（ピニオンギア中心からの相対角度）
      */
     public void setPenPosition(Point2D.Double pinionPosition, Double penOffsetRadius, Double rotationAngle, Double alpha) {
-        System.out.println("setPenPosition called");
-        // デバッグ用: 計算値を出力
-        System.out.println("pinionPosition.x = " + pinionPosition.x);
-        System.out.println("pinionPosition.y = " + pinionPosition.y);
-        System.out.println("penOffsetRadius = " + penOffsetRadius);
-        System.out.println("rotationAngle = " + rotationAngle);
-        System.out.println("alpha = " + alpha);
 
         double newX = pinionPosition.x + penOffsetRadius * Math.cos(rotationAngle + alpha);
         double newY = pinionPosition.y + penOffsetRadius * Math.sin(rotationAngle + alpha);
-        System.out.println("newX = " + newX);
-        System.out.println("newY = " + newY);
         this.position.setLocation(newX, newY);
     }
 
@@ -92,7 +83,6 @@ public class Pen implements Serializable { // Serializableを実装
      * @param position 新しい位置
      */
     public void setPosition(Point2D.Double position) {
-        System.out.println("Pen.setPosition called: " + position);
         this.position = position;
     }
 

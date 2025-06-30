@@ -196,7 +196,6 @@ public class Model implements Serializable { // Serializableを実装
             // 保存されたピニオンギア状態があれば復元
             if (savedPinionCenter != null) {
                 pinionGear.setPosition(new Point2D.Double(savedPinionCenter.x, savedPinionCenter.y));
-                pinionGear.theta = savedTheta;
                 pinionGear.alpha = savedAlpha;
                 pinionGear.setInner(savedIsInner); // 追加: isInnerの状態を復元
             }
@@ -218,7 +217,6 @@ public class Model implements Serializable { // Serializableを実装
         System.out.println("stop");
         // ペンの位置を出力
         Point2D.Double penPos = getPenPosition();
-        System.out.println("Pen position after stop: " + penPos);
         if (!timer.isRunning()) {
             return; // 多重実行防止
         }
@@ -231,9 +229,9 @@ public class Model implements Serializable { // Serializableを実装
         savedPinionCenter = pinionGear.getPinionPosition() != null
             ? new Point2D.Double(pinionGear.getPinionPosition().x, pinionGear.getPinionPosition().y)
             : null;
-        savedTheta = pinionGear.theta;
+        savedTheta = pinionGear.theta; // ←ここで絶対値を保存
         savedAlpha = pinionGear.alpha;
-        savedIsInner = pinionGear.isInner(); // 追加: isInnerの状態を保存
+        savedIsInner = pinionGear.isInner();
     }
 
     /**
@@ -302,10 +300,14 @@ public class Model implements Serializable { // Serializableを実装
     private void updateData() {
         long currentTime = System.currentTimeMillis() - startTime;
 
+        // --- ここでthetaを絶対値で計算 ---
+        // theta = savedTheta + speed * (currentTime - pauseTime) * 0.001
+        // pauseTimeはstart時に0にリセットされるので、ここでは単純に
+        pinionGear.theta = savedTheta + pinionGear.getSpeed() * currentTime * 0.001;
+
         // ピニオンギアの位置とペンの位置を更新
-        // ピニオンギアがスパーギアの内側か外側かを判断してisInnerを設定
         boolean isInner = getDistanceBetweenGears() < spurGear.getSpurRadius();
-        pinionGear.setInner(isInner); // PinionGearにisInnerフラグをセット
+        pinionGear.setInner(isInner);
         pinionGear.move(currentTime, spurGear.getSpurRadius(), spurGear.getSpurPosition());
 
         // ペンの位置を取得

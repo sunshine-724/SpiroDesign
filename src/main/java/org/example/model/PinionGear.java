@@ -117,7 +117,11 @@ public class PinionGear extends SpiroGear implements Serializable {
      * @param spurPosition スパーギアの中心位置（ワールド座標）
      */
     public void move(long time, Double spurRadius, Point2D.Double spurPosition) {
-        theta = speed * time * 0.001 + thetaOffset; // 変更: オフセットを加算
+        // --- 追加: 変数の値を出力 ---
+        System.out.println("PinionGear.move: 計算前 theta=" + theta);
+        System.out.println("PinionGear.move: speed=" + speed + ", time=" + time + ", thetaOffset=" + thetaOffset);
+
+        System.out.println("PinionGear.move: 計算後 theta=" + theta);
 
         // 公転半径の計算: 内接か外接かで異なる
         double revolutionRadius;
@@ -148,7 +152,6 @@ public class PinionGear extends SpiroGear implements Serializable {
         double penAbsoluteX = pinionCenterX + penOffsetRadius * Math.cos(rotationAngle + alpha);
         double penAbsoluteY = pinionCenterY + penOffsetRadius * Math.sin(rotationAngle + alpha);
 
-        System.out.println("PinionGear.move: penAbsoluteX=" + penAbsoluteX + ", penAbsoluteY=" + penAbsoluteY);
         pen.setPosition(new Point2D.Double(penAbsoluteX, penAbsoluteY));
     }
 
@@ -295,3 +298,4 @@ public class PinionGear extends SpiroGear implements Serializable {
         return isInner;
     }
 }
+
