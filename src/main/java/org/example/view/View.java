@@ -36,6 +36,8 @@ import java.util.Hashtable;
 import java.text.DecimalFormat;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.example.lib.PathSegment; // 追加: PathSegmentをインポート
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 
 /**
  * スピログラフアプリケーションのViewクラス。
@@ -103,6 +105,8 @@ public class View extends JPanel {
 
     /** ファイル拡張子定義 */
     private static final String SPIRO_EXTENSION = "spiro";
+    /** PNGファイル拡張子定義 */
+    private static final String PNG_EXTENSION = "png";
 
     /** メニューボタンリスナーを登録 */
     public void setMenuButtonListener(MenuButtonListener listener) {
@@ -131,10 +135,18 @@ public class View extends JPanel {
         };
 
         // メインボタン群をJMenuItemとしてJPopupMenuに追加
-        String[] mainButtonNames = { "Start", "Stop", "Clear", "Save", "Load" };
+        String[] mainButtonNames = { "Start", "Stop", "Clear", "Save", "Load", "PNG保存" };
         for (String name : mainButtonNames) {
             JMenuItem item = new JMenuItem(name);
-            item.addActionListener(commonMenuListener);
+            item.addActionListener(e -> {
+                if ("PNG保存".equals(name)) {
+                    saveLocusAsPNG();
+                } else if (menuButtonListener != null) {
+                    JMenuItem source = (JMenuItem) e.getSource();
+                    String command = source.getText();
+                    menuButtonListener.onMenuButtonClicked(command);
+                }
+            });
             MenuDisplay.add(item);
         }
 
@@ -782,6 +794,73 @@ public class View extends JPanel {
     public void showPenTip() {
         showPenTip = true;
         repaint();
+    }
+
+    /**
+     * 軌跡のみをPNG画像として保存する
+     */
+    public void saveLocusAsPNG() {
+        // PNG保存用ファイル選択ダイアログ
+        JFileChooser fileChooser = new JFileChooser();
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("PNG Images (*." + PNG_EXTENSION + ")", PNG_EXTENSION);
+        fileChooser.setFileFilter(filter);
+        fileChooser.addChoosableFileFilter(filter);
+
+        int result = fileChooser.showSaveDialog(this);
+        if (result != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        File file = fileChooser.getSelectedFile();
+        if (!file.getName().toLowerCase().endsWith("." + PNG_EXTENSION)) {
+            file = new File(file.getAbsolutePath() + "." + PNG_EXTENSION);
+        }
+
+        // 軌跡のみ描画する画像を生成
+        int imgW = getWidth();
+        int imgH = getHeight();
+        BufferedImage img = new BufferedImage(imgW, imgH, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = img.createGraphics();
+
+        // 背景を白で塗りつぶし
+        g2d.setColor(Color.WHITE);
+        g2d.fillRect(0, 0, imgW, imgH);
+
+        // ズーム・パンを反映
+        g2d.translate(viewOffset.x, viewOffset.y);
+        g2d.scale(scale, scale);
+
+        // 軌跡のみ描画
+        List<PathSegment> segmentsToDraw;
+        if (loadedPathSegments != null && !loadedPathSegments.isEmpty()) {
+            segmentsToDraw = loadedPathSegments;
+        } else {
+            segmentsToDraw = model.getPathSegments();
+        }
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        if (segmentsToDraw != null) {
+            for (PathSegment segment : segmentsToDraw) {
+                float penSize = (float) segment.getPenSize();
+                g2d.setColor(segment.getColor());
+                g2d.setStroke(new BasicStroke(penSize));
+                List<Point2D.Double> points = segment.getPoints();
+                if (points != null && points.size() > 1) {
+                    for (int i = 0; i < points.size() - 1; i++) {
+                        Point2D.Double p1 = points.get(i);
+                        Point2D.Double p2 = points.get(i + 1);
+                        g2d.drawLine((int) p1.x, (int) p1.y, (int) p2.x, (int) p2.y);
+                    }
+                }
+            }
+        }
+        g2d.dispose();
+
+        // 画像を保存
+        try {
+            ImageIO.write(img, "png", file);
+            displaySaveSuccessMessage("PNG画像を保存しました！");
+        } catch (Exception ex) {
+            displaySaveSuccessMessage("PNG保存に失敗しました。");
+        }
     }
 
     // --- テスト用のゲッターメソッド ---
