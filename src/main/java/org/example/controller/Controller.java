@@ -83,6 +83,10 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
         double radius = model.getPinionGearRadius();
 
         if (distance <= radius) {
+            // --- 追加: start中はピニオンギア内クリックによる再配置禁止 ---
+            if (model.isRunning()) {
+                return;
+            }
             model.setPenPosition(worldClicked);
             view.repaint();
             return;
@@ -119,9 +123,19 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
         if (spurCenter != null && distToSpur < hitTolerance) {
             draggingMode = DraggingMode.MOVE_SPUR_CENTER;
         } else if (spurCenter != null && Math.abs(distToSpur - spurRadius) < hitTolerance) {
-            draggingMode = DraggingMode.RESIZE_SPUR_RADIUS;
+            // --- 追加: start中はスパーギア円周ドラッグ禁止 ---
+            if (model.isRunning()) {
+                draggingMode = DraggingMode.NONE;
+            } else {
+                draggingMode = DraggingMode.RESIZE_SPUR_RADIUS;
+            }
         } else if (pinionCenter != null && distToPinion < hitTolerance) {
-            draggingMode = DraggingMode.MOVE_PINION;
+            // --- 追加: start中はピニオンギア中心ドラッグ禁止 ---
+            if (model.isRunning()) {
+                draggingMode = DraggingMode.NONE;
+            } else {
+                draggingMode = DraggingMode.MOVE_PINION;
+            }
         } else if (penPosition != null && distToPen < hitTolerance) {
             draggingMode = DraggingMode.NONE;
         } else {

@@ -859,4 +859,12 @@ public class Model implements Serializable { // Serializableを実装
         // それ以外は従来通り
         return centerDist < spurRadius;
     }
+
+    /**
+     * 現在アニメーションが動作中かどうかを返す
+     * @return タイマーが動作中ならtrue
+     */
+    public boolean isRunning() {
+        return timer != null && timer.isRunning();
+    }
 }
