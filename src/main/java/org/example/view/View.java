@@ -33,7 +33,11 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.JLabel;
 import java.util.Hashtable;
-import java.text.DecimalFormat; // DecimalFormatをインポート
+import java.text.DecimalFormat;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import org.example.lib.PathSegment; // 追加: PathSegmentをインポート
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 
 /**
  * スピログラフアプリケーションのViewクラス。
@@ -52,8 +56,8 @@ public class View extends JPanel {
 
     /** 拡大縮小率 */
     private double scale = 1.0;
-    private static final double MIN_SCALE = 0.1; // 最小スケールをより小さく設定
-    private static final double MAX_SCALE = 5.0; // 最大スケールをより大きく設定
+    private static final double MIN_SCALE = 0.1;
+    private static final double MAX_SCALE = 5.0;
 
     /** ビューのオフセット（パン用） */
     private Point2D.Double viewOffset = new Point2D.Double(0, 0);
@@ -72,12 +76,12 @@ public class View extends JPanel {
     /** ピニオンギアドラッグ点（スクリーン座標） */
     private Point currentDragPointScreenForPinion = null;
 
-    /** ロードされた軌跡データ */
-    private List<Point2D.Double> loadedLocusData = null;
+    // ロードされた軌跡データをPathSegmentのリストで管理
+    private List<PathSegment> loadedPathSegments = null; // loadedLocusData から変更
     /** ロードされたペン色 */
-    private Color loadedPenColor = null;
+    private Color loadedPenColor = null; // ロードされたペンの色は、loadedPathSegmentsの最後のセグメントの色か、Modelの現在のペンの色を反映する
     /** ロードされたペンサイズ */
-    private double loadedPenSize = -1.0;
+    private double loadedPenSize = -1.0; // ロードされたペンのサイズ
 
     /** 保存メッセージ */
     private String saveMessage = null;
@@ -98,6 +102,11 @@ public class View extends JPanel {
 
     /** DecimalFormat for scale percentage display */
     private DecimalFormat percentFormat = new DecimalFormat("0.0%");
+
+    /** ファイル拡張子定義 */
+    private static final String SPIRO_EXTENSION = "spiro";
+    /** PNGファイル拡張子定義 */
+    private static final String PNG_EXTENSION = "png";
 
     /** メニューボタンリスナーを登録 */
     public void setMenuButtonListener(MenuButtonListener listener) {
@@ -125,17 +134,25 @@ public class View extends JPanel {
             }
         };
 
-        // --- メインボタン群をJMenuItemとしてJPopupMenuに追加 ---
-        String[] mainButtonNames = { "Start", "Stop", "Clear", "Save", "Load" };
+        // メインボタン群をJMenuItemとしてJPopupMenuに追加
+        String[] mainButtonNames = { "Start", "Stop", "Clear", "Save", "Load", "PNG保存" };
         for (String name : mainButtonNames) {
             JMenuItem item = new JMenuItem(name);
-            item.addActionListener(commonMenuListener);
+            item.addActionListener(e -> {
+                if ("PNG保存".equals(name)) {
+                    saveLocusAsPNG();
+                } else if (menuButtonListener != null) {
+                    JMenuItem source = (JMenuItem) e.getSource();
+                    String command = source.getText();
+                    menuButtonListener.onMenuButtonClicked(command);
+                }
+            });
             MenuDisplay.add(item);
         }
 
         MenuDisplay.addSeparator(); // 区切り線を追加
 
-        // --- ペンサイズをPenSizeサブメニューにまとめる ---
+        // ペンサイズをPenSizeサブメニューにまとめる
         JMenu penSizeMenu = new JMenu("PenSize");
         String[] penSizes = { "Small", "Medium", "Large" };
         for (String size : penSizes) {
@@ -145,7 +162,7 @@ public class View extends JPanel {
         }
         MenuDisplay.add(penSizeMenu);
 
-        // --- カラーパレット表示メニュー項目を追加 ---
+        // カラーパレット表示メニュー項目を追加
         JMenuItem chooseColorItem = new JMenuItem("色を選択...");
         chooseColorItem.addActionListener(e -> {
             Color newColor = JColorChooser.showDialog(View.this, "色を選択", model.getPenColor());
@@ -157,7 +174,7 @@ public class View extends JPanel {
         });
         MenuDisplay.add(chooseColorItem);
 
-        // --- スピード選択用JSliderを追加 ---
+        // スピード選択用JSliderを追加
         MenuDisplay.addSeparator(); // 区切り線を追加
 
         // スライダーとラベルを格納するためのパネル
@@ -169,17 +186,17 @@ public class View extends JPanel {
 
         int initialSpeed = (int) model.getPinionGearSpeed(); // Modelから実際の速度を取得
         if (initialSpeed < 1) initialSpeed = 1;
-        if (initialSpeed > 100) initialSpeed = 100;
+        if (initialSpeed > 20) initialSpeed = 20;
 
 
-        JSlider speedSlider = new JSlider(JSlider.HORIZONTAL, 1, 100, initialSpeed);
+        JSlider speedSlider = new JSlider(JSlider.HORIZONTAL, 1, 20, initialSpeed);
         speedSlider.setPaintTicks(true);
         speedSlider.setSnapToTicks(true);
 
         // カスタムラベルテーブルを作成
         Hashtable<Integer, JLabel> labelTable = new Hashtable<>();
-        labelTable.put(1, new JLabel("1"));
-        labelTable.put(100, new JLabel("100"));
+        labelTable.put(1, new JLabel("Min"));
+        labelTable.put(20, new JLabel("Max"));
         speedSlider.setLabelTable(labelTable);
         speedSlider.setPaintLabels(true);
 
@@ -239,7 +256,7 @@ public class View extends JPanel {
         g2d.translate(viewOffset.x, viewOffset.y);
         g2d.scale(scale, scale);
 
-        // --- 中心点の描画（r=2） ---
+        // 中心点の描画（r=2）
         // スパーギア中心
         Point2D.Double spurPosition = model.getSpurGearPosition();
         if (spurPosition != null) {
@@ -258,6 +275,7 @@ public class View extends JPanel {
             displayPinion(g2d, pinionPosition);
         }
 
+        // displaySpirographLocusの呼び出しを変更
         displaySpirographLocus(g2d);
 
         Point2D.Double penPosition = model.getPenPosition();
@@ -346,7 +364,7 @@ public class View extends JPanel {
         java.awt.Stroke originalStroke = g.getStroke();
 
         g.setColor(Color.BLUE);
-        g.setStroke(new BasicStroke(2.0f));
+        g.setStroke(new BasicStroke(1.2f)); // ここを細く
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         double radius = model.getPinionGearRadius();
@@ -365,7 +383,7 @@ public class View extends JPanel {
      * @param position 座標
      * @param color 色
      */
-    public void displayMousePointer(Graphics2D g, Point2D.Double position, Color color) {
+    public void displayMousePointer(Graphics2D g, Point2D.Double position, Color color) { // Point22D.DoubleをPoint2D.Doubleに修正
         // 未実装
     }
 
@@ -379,7 +397,7 @@ public class View extends JPanel {
         java.awt.Stroke originalStroke = g.getStroke();
 
         g.setColor(Color.RED);
-        g.setStroke(new BasicStroke(2.0f));
+        g.setStroke(new BasicStroke(1.2f)); // ここを細く
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         double radius = model.getSpurGearRadius();
@@ -415,34 +433,36 @@ public class View extends JPanel {
 
     /**
      * スピログラフの軌跡を描画
+     * LoadedPathSegmentsまたはModelからPathSegmentsを取得して描画する。
      * @param g2d グラフィックス2D
      */
     private void displaySpirographLocus(Graphics2D g2d) {
         Color originalColor = g2d.getColor();
         java.awt.Stroke originalStroke = g2d.getStroke();
 
-        List<Point2D.Double> locusToDraw;
-        Color penColorToUse;
-        double penSizeToUse;
+        List<PathSegment> segmentsToDraw;
 
-        if (loadedLocusData != null && !loadedLocusData.isEmpty() && loadedPenColor != null && loadedPenSize != -1.0) {
-            locusToDraw = loadedLocusData;
-            penColorToUse = loadedPenColor;
-            penSizeToUse = loadedPenSize;
+        if (loadedPathSegments != null && !loadedPathSegments.isEmpty()) {
+            segmentsToDraw = loadedPathSegments;
         } else {
-            locusToDraw = model.getLocus();
-            penColorToUse = model.getPenColor();
-            penSizeToUse = model.getPenSize();
+            segmentsToDraw = model.getPathSegments();
         }
 
-        g2d.setColor(penColorToUse);
-        g2d.setStroke(new BasicStroke((float) penSizeToUse));
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        if (locusToDraw != null && locusToDraw.size() > 1) {
-            for (int i = 0; i < locusToDraw.size() - 1; i++) {
-                Point2D.Double p1 = locusToDraw.get(i);
-                Point2D.Double p2 = locusToDraw.get(i + 1);
-                g2d.drawLine((int) p1.x, (int) p1.y, (int) p2.x, (int) p2.y);
+        if (segmentsToDraw != null) {
+            for (PathSegment segment : segmentsToDraw) {
+                float penSize = (float) segment.getPenSize();
+                g2d.setColor(segment.getColor());
+                g2d.setStroke(new BasicStroke(penSize));
+                List<Point2D.Double> points = segment.getPoints();
+                if (points != null && points.size() > 1) {
+                    for (int i = 0; i < points.size() - 1; i++) {
+                        Point2D.Double p1 = points.get(i);
+                        Point2D.Double p2 = points.get(i + 1);
+                        g2d.drawLine((int) p1.x, (int) p1.y, (int) p2.x, (int) p2.y);
+                    }
+                }
             }
         }
 
@@ -472,7 +492,9 @@ public class View extends JPanel {
      */
     public void zoomAt(Point screenPoint, double zoomFactor) {
         // 現在のスクリーン座標での中心点をワールド座標に変換
-        Point2D.Double worldPointBeforeZoom = screenToWorld(screenPoint);
+        // viewOffsetとscaleを考慮して、現在の表示状態でのワールド座標を取得
+        double worldX = (screenPoint.getX() - viewOffset.x) / scale;
+        double worldY = (screenPoint.getY() - viewOffset.y) / scale;
 
         // 新しいスケールを計算し、範囲内に収める
         double newScale = scale * zoomFactor;
@@ -490,15 +512,12 @@ public class View extends JPanel {
         // 新しいスケールを設定
         scale = newScale;
 
-        // ズーム後のスクリーン座標での中心点
-        Point2D.Double screenPointAfterZoom = new Point2D.Double(
-            worldPointBeforeZoom.x * scale + viewOffset.x,
-            worldPointBeforeZoom.y * scale + viewOffset.y
-        );
-
-        // ズーム後のオフセットを計算
-        viewOffset.x += (screenPoint.x - screenPointAfterZoom.x);
-        viewOffset.y += (screenPoint.y - screenPointAfterZoom.y);
+        // 新しいスケールとワールド座標のズーム中心点から、新しいオフセットを計算する
+        // (screenPoint.x - newViewOffsetX) / newScale = worldX
+        // screenPoint.x - newViewOffsetX = worldX * newScale
+        // newViewOffsetX = screenPoint.x - (worldX * newScale)
+        viewOffset.x = screenPoint.getX() - (worldX * newScale);
+        viewOffset.y = screenPoint.getY() - (worldY * newScale);
 
         repaint();
     }
@@ -532,24 +551,39 @@ public class View extends JPanel {
     }
 
     /**
-     * 保存ファイル選択ダイアログ
-     * @return 選択ファイル
+     * 保存ファイル選択ダイアログを表示する。
+     * .spiro拡張子のファイルフィルタを設定し、拡張子が付与されていない場合は自動で追加する。
+     * @return 選択されたファイル、またはキャンセルされた場合はnull
      */
     public File chooseSaveFile() {
         JFileChooser fileChooser = new JFileChooser();
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("Spiro Files (*." + SPIRO_EXTENSION + ")", SPIRO_EXTENSION);
+        fileChooser.setFileFilter(filter); // ファイルフィルタを設定
+        fileChooser.addChoosableFileFilter(filter); // ChoosableFileFilterとして追加
+
         int result = fileChooser.showSaveDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
-            return fileChooser.getSelectedFile();
+            File file = fileChooser.getSelectedFile();
+            // 選択されたファイル名に拡張子がない場合、.spiroを付与
+            if (!file.getName().toLowerCase().endsWith("." + SPIRO_EXTENSION)) {
+                file = new File(file.getAbsolutePath() + "." + SPIRO_EXTENSION);
+            }
+            return file;
         }
         return null;
     }
 
     /**
-     * 読込ファイル選択ダイアログ
-     * @return 選択ファイル
+     * 読込ファイル選択ダイアログを表示する。
+     * .spiro拡張子のファイルフィルタを設定する。
+     * @return 選択されたファイル、またはキャンセルされた場合はnull
      */
     public File chooseLoadFile() {
         JFileChooser fileChooser = new JFileChooser();
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("Spiro Files (*." + SPIRO_EXTENSION + ")", SPIRO_EXTENSION);
+        fileChooser.setFileFilter(filter); // ファイルフィルタを設定
+        fileChooser.addChoosableFileFilter(filter); // ChoosableFileFilterとして追加
+
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             return fileChooser.getSelectedFile();
@@ -669,14 +703,15 @@ public class View extends JPanel {
 
     /**
      * 軌跡データ・ペン情報をViewにセット
-     * @param locus 軌跡
-     * @param penColor ペン色
-     * @param penSize ペンサイズ
+     * (ModelからPathSegmentのリストを受け取るように変更)
+     * @param loadedPathSegments 軌跡のデータ (PathSegmentのリスト)
+     * @param penColor  ペンの色 (現在のペンの色を反映するが、主に過去の軌跡には使用されない)
+     * @param penSize   ペンのサイズ
      */
-    public void setLocusData(List<Point2D.Double> locus, Color penColor, double penSize) {
-        this.loadedLocusData = locus;
+    public void setLocusData(List<PathSegment> loadedPathSegments, Color penColor, double penSize) { // 引数を変更
+        this.loadedPathSegments = loadedPathSegments; // loadedLocusData から変更
         this.loadedPenColor = penColor;
-        this.loadedPenSize = penSize; // ここを修正：-1.0ではなくpenSizeをセット
+        this.loadedPenSize = penSize;
         repaint();
     }
 
@@ -684,7 +719,7 @@ public class View extends JPanel {
      * ロード済み軌跡データをクリア
      */
     public void clearLoadedLocusData() {
-        this.loadedLocusData = null;
+        this.loadedPathSegments = null; // loadedLocusData から変更
         this.loadedPenColor = null;
         this.loadedPenSize = -1.0;
         repaint();
@@ -738,11 +773,11 @@ public class View extends JPanel {
         Point2D pinionCenter = model.getPinionGearPosition();
         double pinionRadius = model.getPinionGearRadius();
 
-        if (spurCenter != null && world.distance(spurCenter) < 10 / scale) { // スケールを考慮
+        if (spurCenter != null && world.distance(spurCenter) < 10 / scale) {
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-        } else if (spurCenter != null && Math.abs(world.distance(spurCenter) - spurRadius) < 10 / scale) { // スケールを考慮
+        } else if (spurCenter != null && Math.abs(world.distance(spurCenter) - spurRadius) < 10 / scale) {
             setCursor(Cursor.getPredefinedCursor(Cursor.SE_RESIZE_CURSOR));
-        } else if (pinionCenter != null && world.distance(pinionCenter) < 10 / scale) { // スケールを考慮
+        } else if (pinionCenter != null && world.distance(pinionCenter) < 10 / scale) {
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         } else {
             setCursor(Cursor.getDefaultCursor());
@@ -760,4 +795,114 @@ public class View extends JPanel {
         showPenTip = true;
         repaint();
     }
+
+    /**
+     * 軌跡のみをPNG画像として保存する
+     */
+    public void saveLocusAsPNG() {
+        // PNG保存用ファイル選択ダイアログ
+        JFileChooser fileChooser = new JFileChooser();
+        FileNameExtensionFilter filter = new FileNameExtensionFilter("PNG Images (*." + PNG_EXTENSION + ")", PNG_EXTENSION);
+        fileChooser.setFileFilter(filter);
+        fileChooser.addChoosableFileFilter(filter);
+
+        int result = fileChooser.showSaveDialog(this);
+        if (result != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        File file = fileChooser.getSelectedFile();
+        if (!file.getName().toLowerCase().endsWith("." + PNG_EXTENSION)) {
+            file = new File(file.getAbsolutePath() + "." + PNG_EXTENSION);
+        }
+
+        // 軌跡のみ描画する画像を生成
+        int imgW = getWidth();
+        int imgH = getHeight();
+        BufferedImage img = new BufferedImage(imgW, imgH, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = img.createGraphics();
+
+        // 背景を白で塗りつぶし
+        g2d.setColor(Color.WHITE);
+        g2d.fillRect(0, 0, imgW, imgH);
+
+        // ズーム・パンを反映
+        g2d.translate(viewOffset.x, viewOffset.y);
+        g2d.scale(scale, scale);
+
+        // 軌跡のみ描画
+        List<PathSegment> segmentsToDraw;
+        if (loadedPathSegments != null && !loadedPathSegments.isEmpty()) {
+            segmentsToDraw = loadedPathSegments;
+        } else {
+            segmentsToDraw = model.getPathSegments();
+        }
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        if (segmentsToDraw != null) {
+            for (PathSegment segment : segmentsToDraw) {
+                float penSize = (float) segment.getPenSize();
+                g2d.setColor(segment.getColor());
+                g2d.setStroke(new BasicStroke(penSize));
+                List<Point2D.Double> points = segment.getPoints();
+                if (points != null && points.size() > 1) {
+                    for (int i = 0; i < points.size() - 1; i++) {
+                        Point2D.Double p1 = points.get(i);
+                        Point2D.Double p2 = points.get(i + 1);
+                        g2d.drawLine((int) p1.x, (int) p1.y, (int) p2.x, (int) p2.y);
+                    }
+                }
+            }
+        }
+        g2d.dispose();
+
+        // 画像を保存
+        try {
+            ImageIO.write(img, "png", file);
+            displaySaveSuccessMessage("PNG画像を保存しました！");
+        } catch (Exception ex) {
+            displaySaveSuccessMessage("PNG保存に失敗しました。");
+        }
+    }
+
+    // --- テスト用のゲッターメソッド ---
+
+    /**
+     * 現在の保存メッセージを取得
+     * @return 保存メッセージ
+     */
+    public String getSaveMessage() {
+        return saveMessage;
+    }
+
+    /**
+     * スパーギア定義中フラグの状態を取得
+     * @return スパーギア定義中であればtrue
+     */
+    public boolean isDefiningSpurGear() {
+        return isDefiningSpurGear;
+    }
+
+    /**
+     * スパーギア中心（スクリーン座標）を取得
+     * @return スパーギア中心のスクリーン座標
+     */
+    public Point getSpurGearCenterScreen() {
+        return spurGearCenterScreen;
+    }
+
+    /**
+     * スパーギアドラッグ点（スクリーン座標）を取得
+     * @return スパーギアドラッグ点のスクリーン座標
+     */
+    public Point getCurrentDragPointScreen() {
+        return currentDragPointScreen;
+    }
+
+    /**
+     * ペン先表示フラグの状態を取得
+     * @return ペン先が表示されていればtrue
+     */
+    public boolean isShowPenTip() {
+        return showPenTip;
+    }
 }
+

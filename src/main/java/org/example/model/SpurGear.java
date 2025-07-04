@@ -2,14 +2,17 @@ package org.example.model;
 
 import java.awt.Color;
 import java.awt.geom.Point2D;
+import java.io.Serializable;
 
 /**
  * スピログラフのスパーギアを表すクラス。
  * スパーギアは、スピロギアの一種で、特定の位置と半径を持つ。
- * 
+ *
  * このクラスは、スパーギアの位置、半径、色を管理し、変更できるメソッドを提供する。
  */
-public class SpurGear extends SpiroGear {
+public class SpurGear extends SpiroGear implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     /**
      * スパーギアの初期の位置を表す2D座標。
      */
@@ -35,7 +38,7 @@ public class SpurGear extends SpiroGear {
 
     /**
      * スパーギアを特定の位置、半径、色で作成するコンストラクタ。
-     * 
+     *
      * @param position ギアの位置
      * @param radius   ギアの半径
      * @param color    ギアの色
@@ -46,7 +49,7 @@ public class SpurGear extends SpiroGear {
 
     /**
      * スパーギアの半径を返すメソッド。
-     * 
+     *
      * @return ギアの半径
      */
     public double getSpurRadius() {
@@ -55,7 +58,7 @@ public class SpurGear extends SpiroGear {
 
     /**
      * スパーギアの位置を返すメソッド。
-     * 
+     *
      * @return ギアの位置
      */
     public Point2D.Double getSpurPosition() {
@@ -64,9 +67,10 @@ public class SpurGear extends SpiroGear {
 
     /**
      * スパーギアの位置を設定するメソッド。
-     * 
+     * 親クラスのsetPositionメソッドをオーバーライドする。
      * @param position 新しい位置
      */
+    @Override // SpiroGearのsetPositionをオーバーライド
     public void setPosition(Point2D.Double position) {
         this.position = position;
     }

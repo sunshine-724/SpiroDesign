@@ -2,12 +2,15 @@ package org.example.model;
 
 import java.awt.Color;
 import java.awt.geom.Point2D;
+import java.io.Serializable; // 追加: Serializableをインポート
 
 /**
  * スピログラフを描画するペンを表すクラス。
  * ペンのサイズ、色、位置を管理し、ピニオンギアの動きに応じて移動する機能を提供する。
  */
-public class Pen {
+public class Pen implements Serializable { // Serializableを実装
+    private static final long serialVersionUID = 1L; // serialVersionUIDを追加
+
     /**
      * ペンのサイズを表す変数。
      */
@@ -27,12 +30,12 @@ public class Pen {
     /**
      * デフォルトのペンサイズ。
      */
-    private static final double DEFAULT_PEN_SIZE = 5.0;
+    public static final double DEFAULT_PEN_SIZE = 2.0; // medium相当のサイズに変更
 
     /**
      * デフォルトのペンの色。
      */
-    private static final Color DEFAULT_COLOR = Color.BLACK;
+    public static final Color DEFAULT_COLOR = Color.BLACK;
 
     /**
      * ペンを作成するデフォルトコンストラクタ。
@@ -41,6 +44,7 @@ public class Pen {
     public Pen() {
         this.penSize = DEFAULT_PEN_SIZE;
         this.color = DEFAULT_COLOR;
+        this.position = new Point2D.Double(0, 0);
     }
 
     /**
@@ -58,18 +62,20 @@ public class Pen {
 
     /**
      * ピニオンギアの動きに応じてペンを移動させるメソッド。
-     * ペンの位置は、ピニオンギアの位置と半径、角度、角加速度に基づいて計算される。
+     * ペンの位置は、ピニオンギアの中心からの相対位置として計算されるべきである。
      *
-     * @param pinionPosition ピニオンギアの位置
-     * @param pinionRadius   ピニオンギアの半径
-     * @param theta          ピニオンギアの角度
-     * @param alpha          ピニオンギアの角加速度
+     * @param pinionPosition ピニオンギアの絶対位置（中心座標）
+     * @param penOffsetRadius ペン先のピニオンギアに対する相対半径
+     * @param rotationAngle  ピニオンギアの自転角度
+     * @param alpha          ペン先のオフセット角度（ピニオンギア中心からの相対角度）
      */
-    public void setPenPosition(Point2D.Double pinionPosition, Double pinionRadius, Double theta, Double alpha) {
-        double penX = pinionPosition.x + pinionRadius * Math.cos(theta + alpha);
-        double penY = pinionPosition.y + pinionRadius * Math.sin(theta + alpha);
-        this.position.setLocation(penX, penY);
+    public void setPenPosition(Point2D.Double pinionPosition, Double penOffsetRadius, Double rotationAngle, Double alpha) {
+
+        double newX = pinionPosition.x + penOffsetRadius * Math.cos(rotationAngle + alpha);
+        double newY = pinionPosition.y + penOffsetRadius * Math.sin(rotationAngle + alpha);
+        this.position.setLocation(newX, newY);
     }
+
 
     /**
      * ペンの位置を設定するメソッド。
@@ -103,8 +109,17 @@ public class Pen {
      *
      * @param size 新しいサイズ
      */
-    public void changeSize(double size) {
+    public void setPenSize(double size) {
         this.penSize = size;
+    }
+
+    /**
+     * ペンのサイズを取得するメソッド。
+     *
+     * @return ペンのサイズ
+     */
+    public double getPenSize() {
+        return penSize;
     }
 
     /**
@@ -112,10 +127,6 @@ public class Pen {
      *
      * @return ペンの色
      */
-    public double getPenSize() {
-        return penSize;
-    }
-
     public Color getColor() {
         return color;
     }

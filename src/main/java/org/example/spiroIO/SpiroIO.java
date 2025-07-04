@@ -18,7 +18,7 @@ public class SpiroIO {
 
     /**
      * モデルとペンの状態を指定されたファイルに保存します。
-     * 
+     *
      * @param file  保存するファイル
      * @param model Spiroのモデルデータ
      * @param pen   Spiroのペンの状態
@@ -35,7 +35,7 @@ public class SpiroIO {
     /**
      * 指定されたファイルからモデルとペンの状態を読み込みます。
      * 読み込まれたデータは Pair<Model, Pen> として返されます。
-     * 
+     *
      * @param file 読み込むファイル
      * @return モデルとペンのデータを含むPairオブジェクト。読み込みに失敗した場合はnullを返す。
      */
