@@ -197,7 +197,6 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
 
         switch (draggingMode) {
             case MOVE_SPUR_CENTER:
-                model.setPenVisible(false);
                 model.moveSpurGearBy(dx, dy);
                 break;
 
