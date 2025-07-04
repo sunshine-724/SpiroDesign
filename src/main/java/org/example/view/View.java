@@ -425,7 +425,21 @@ public class View extends JPanel {
         g.setStroke(new BasicStroke((float) penSize));
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
+        // ペン本体
         g.fillOval((int) (position.x - penSize / 2), (int) (position.y - penSize / 2), (int) penSize, (int) penSize);
+
+        // --- 追加: ペンの周りに円（アウトライン）を描画 ---
+        g.setColor(Color.BLACK); // アウトラインは黒
+        float outlineWidth = 1.5f;
+        g.setStroke(new BasicStroke(outlineWidth));
+        int outlineRadius = (int) Math.ceil(penSize / 2 + 3); // ペンサイズより少し大きめ
+        g.drawOval(
+            (int) (position.x - outlineRadius),
+            (int) (position.y - outlineRadius),
+            outlineRadius * 2,
+            outlineRadius * 2
+        );
+        // --- 追加ここまで ---
 
         g.setColor(originalColor);
         g.setStroke(originalStroke);
