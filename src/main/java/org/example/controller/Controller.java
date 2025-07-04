@@ -317,15 +317,15 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
                 }
                 break;
             case "Small":
-                model.changePenSize(1.0);
-                view.repaint();
-                break;
-            case "Medium":
                 model.changePenSize(2.0);
                 view.repaint();
                 break;
-            case "Large":
+            case "Medium":
                 model.changePenSize(3.0);
+                view.repaint();
+                break;
+            case "Large":
+                model.changePenSize(4.0);
                 view.repaint();
                 break;
             default:

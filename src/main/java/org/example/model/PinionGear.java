@@ -144,7 +144,7 @@ public class PinionGear extends SpiroGear implements Serializable {
         if (isInner) {
             rotationFactor = (spurRadius / radius) - 1; // ハイポサイクロイド
         } else {
-            rotationFactor = (spurRadius / radius) + 1; // エピサイクロイド
+            rotationFactor = -((spurRadius / radius) + 1); // エピサイクロイド: 符号を反転
         }
         double rotationAngle = rotationFactor * theta;
 
