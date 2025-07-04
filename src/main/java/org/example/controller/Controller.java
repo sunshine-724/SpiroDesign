@@ -1,11 +1,11 @@
 package org.example.controller;
 
+import java.awt.Color;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.awt.geom.Point2D;
-import java.awt.Color;
 import java.io.File;
 
 import javax.swing.SwingUtilities;
@@ -203,10 +203,45 @@ public class Controller extends MouseInputAdapter implements MouseWheelListener,
             case RESIZE_SPUR_RADIUS:
                 Point2D spurCenterForResize = model.getSpurGearPosition();
                 if (spurCenterForResize != null) {
-                    double newRadius = currentWorld.distance(spurCenterForResize);
-                    model.setSpurRadius(newRadius); // ドラッグ中も半径を即時変更
+                    double oldSpurRadius = model.getSpurGearRadius();
+                    double oldPinionRadius = model.getPinionGearRadius();
+
+                    double newSpurRadius = currentWorld.distance(spurCenterForResize);
+
+                    if (newSpurRadius < 10.0 / view.getScale()) {
+                        newSpurRadius = 10.0 / view.getScale();
+                    }
+
+                    double scaleRatio = newSpurRadius / oldSpurRadius;
+
+                    double newPinionRadius = oldPinionRadius * scaleRatio;
+                    if (newPinionRadius < 5.0 / view.getScale()) {
+                        newPinionRadius = 5.0 / view.getScale();
+                    }
+
+                    Point2D pinionCenter = model.getPinionGearPosition();
+                    dx = pinionCenter.getX() - spurCenterForResize.getX();
+                    dy = pinionCenter.getY() - spurCenterForResize.getY();
+                    double dist = Math.hypot(dx, dy);
+                    if (dist < 1e-6) break;
+
+                    double unitX = dx / dist;
+                    double unitY = dy / dist;
+
+                    double centerDistance = isInner
+                        ? newSpurRadius - newPinionRadius
+                        : newSpurRadius + newPinionRadius;
+
+                    double newCenterX = spurCenterForResize.getX() + unitX * centerDistance;
+                    double newCenterY = spurCenterForResize.getY() + unitY * centerDistance;
+                    Point2D.Double newPinionCenter = new Point2D.Double(newCenterX, newCenterY);
+
+                    model.setSpurRadius(newSpurRadius);
+                    model.changePinionGearRadius(newPinionRadius);
+                    model.setPinionGearPosition(newPinionCenter);
                 }
                 break;
+
 
             case MOVE_PINION:
                 Point2D spurCenter = model.getSpurGearPosition();
