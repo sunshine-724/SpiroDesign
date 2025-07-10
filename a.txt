@@ -1,0 +1,81 @@
+> Task :compileJava UP-TO-DATE
+> Task :processResources NO-SOURCE
+> Task :classes UP-TO-DATE
+> Task :jar UP-TO-DATE
+> Task :assemble UP-TO-DATE
+
+> Task :compileTestJava FAILED
+
+[Incubating] Problems report is available at: file:///Users/nakagawakazuki/development/SpiroDesign/build/reports/problems/problems-report.html
+3 actionable tasks: 1 executed, 2 up-to-date
+Picked up _JAVA_OPTIONS: -Dfile.encoding=UTF-8
+/Users/nakagawakazuki/development/SpiroDesign/src/test/java/org/example/controller/ControllerTest.java:45: エラー: thenReturnに適切なメソッドが見つかりません(Point2D)
+        when(view.screenToWorld(screenPoint)).thenReturn(worldPoint);
+                                             ^
+    メソッド OngoingStubbing.thenReturn(Double)は使用できません
+      (引数の不一致: Point2DをDoubleに変換できません:)
+    メソッド OngoingStubbing.thenReturn(Double,Double...)は使用できません
+      (引数の不一致: Point2DをDoubleに変換できません:)
+/Users/nakagawakazuki/development/SpiroDesign/src/test/java/org/example/controller/ControllerTest.java:63: エラー: thenReturnに適切なメソッドが見つかりません(Point2D)
+        when(view.screenToWorld(screenPoint)).thenReturn(worldPoint);
+                                             ^
+    メソッド OngoingStubbing.thenReturn(Double)は使用できません
+      (引数の不一致: Point2DをDoubleに変換できません:)
+    メソッド OngoingStubbing.thenReturn(Double,Double...)は使用できません
+      (引数の不一致: Point2DをDoubleに変換できません:)
+/Users/nakagawakazuki/development/SpiroDesign/src/test/java/org/example/controller/ControllerTest.java:95: エラー: thenReturnに適切なメソッドが見つかりません(Point2D)
+        when(view.screenToWorld(startPoint)).thenReturn(startWorld);
+                                            ^
+    メソッド OngoingStubbing.thenReturn(Double)は使用できません
+      (引数の不一致: Point2DをDoubleに変換できません:)
+    メソッド OngoingStubbing.thenReturn(Double,Double...)は使用できません
+      (引数の不一致: Point2DをDoubleに変換できません:)
+/Users/nakagawakazuki/development/SpiroDesign/src/test/java/org/example/controller/ControllerTest.java:96: エラー: thenReturnに適切なメソッドが見つかりません(Point2D)
+        when(view.screenToWorld(endPoint)).thenReturn(endWorld);
+                                          ^
+    メソッド OngoingStubbing.thenReturn(Double)は使用できません
+      (引数の不一致: Point2DをDoubleに変換できません:)
+    メソッド OngoingStubbing.thenReturn(Double,Double...)は使用できません
+      (引数の不一致: Point2DをDoubleに変換できません:)
+エラー4個
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileTestJava'.
+> Compilation failed; see the compiler output below.
+  /Users/nakagawakazuki/development/SpiroDesign/src/test/java/org/example/controller/ControllerTest.java:45: エラー: thenReturnに適切なメソッドが見つかりません(Point2D)
+          when(view.screenToWorld(screenPoint)).thenReturn(worldPoint);
+                                               ^
+      メソッド OngoingStubbing.thenReturn(Double)は使用できません
+        (引数の不一致: Point2DをDoubleに変換できません:)
+      メソッド OngoingStubbing.thenReturn(Double,Double...)は使用できません
+        (引数の不一致: Point2DをDoubleに変換できません:)
+  /Users/nakagawakazuki/development/SpiroDesign/src/test/java/org/example/controller/ControllerTest.java:63: エラー: thenReturnに適切なメソッドが見つかりません(Point2D)
+          when(view.screenToWorld(screenPoint)).thenReturn(worldPoint);
+                                               ^
+      メソッド OngoingStubbing.thenReturn(Double)は使用できません
+        (引数の不一致: Point2DをDoubleに変換できません:)
+      メソッド OngoingStubbing.thenReturn(Double,Double...)は使用できません
+        (引数の不一致: Point2DをDoubleに変換できません:)
+  /Users/nakagawakazuki/development/SpiroDesign/src/test/java/org/example/controller/ControllerTest.java:95: エラー: thenReturnに適切なメソッドが見つかりません(Point2D)
+          when(view.screenToWorld(startPoint)).thenReturn(startWorld);
+                                              ^
+      メソッド OngoingStubbing.thenReturn(Double)は使用できません
+        (引数の不一致: Point2DをDoubleに変換できません:)
+      メソッド OngoingStubbing.thenReturn(Double,Double...)は使用できません
+        (引数の不一致: Point2DをDoubleに変換できません:)
+  /Users/nakagawakazuki/development/SpiroDesign/src/test/java/org/example/controller/ControllerTest.java:96: エラー: thenReturnに適切なメソッドが見つかりません(Point2D)
+          when(view.screenToWorld(endPoint)).thenReturn(endWorld);
+                                            ^
+      メソッド OngoingStubbing.thenReturn(Double)は使用できません
+        (引数の不一致: Point2DをDoubleに変換できません:)
+      メソッド OngoingStubbing.thenReturn(Double,Double...)は使用できません
+        (引数の不一致: Point2DをDoubleに変換できません:)
+  エラー4個
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights.
+
+BUILD FAILED in 1s
